@@ -88,16 +88,18 @@ generateQRBtn.addEventListener('click', async () => {
     
     qrcodeContainer.innerHTML = '';
     try {
-        const qrCode = await QRCode.toCanvas(signatureURL, {
+        const qrDiv = document.createElement('div');
+        qrcodeContainer.appendChild(qrDiv);
+
+        new QRCode(qrDiv, {
+            text: signatureURL,
             width: 300,
-            margin: 2,
-            color: {
-                dark: '#667eea',
-                light: '#ffffff'
-            }
+            height: 300,
+            colorDark: '#667eea',
+            colorLight: '#ffffff'
         });
-        qrcodeContainer.appendChild(qrCode);
-        qrCodeData = qrCode;
+
+        qrCodeData = qrDiv.querySelector('canvas');
         
         qrSection.classList.remove('hidden');
         qrValidity.innerHTML = `<strong>${slot.label}</strong><br>Formation: ${formation.value}<br>Formateur: ${formateurPrenom.value} ${formateurNom.value}`;
@@ -105,7 +107,7 @@ generateQRBtn.addEventListener('click', async () => {
         qrSection.scrollIntoView({ behavior: 'smooth' });
     } catch (error) {
         console.error('Erreur génération QR:', error);
-        alert('❌ Erreur lors de la génération du QR code');
+        alert('❌ Erreur lors de la génération du QR code: ' + error.message);
     }
 });
 
