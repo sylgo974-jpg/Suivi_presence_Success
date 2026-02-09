@@ -1,5 +1,5 @@
 // Configuration - À MODIFIER après déploiement backend
-const API_URL = 'https://VOTRE-BACKEND-VERCEL.vercel.app/api';
+const API_URL = 'https://success-formation-pointage.vercel.app/api';
 
 const formateurNom = document.getElementById('formateur-nom');
 const formateurPrenom = document.getElementById('formateur-prenom');
