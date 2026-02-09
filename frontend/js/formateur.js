@@ -1,4 +1,4 @@
-const API_URL = 'https://suvi-presence-success.vercel.app/api';
+const API_URL = 'https://suivi-presence-success.vercel.app/api';
 
 const formateurNom = document.getElementById('formateur-nom');
 const formateurPrenom = document.getElementById('formateur-prenom');
