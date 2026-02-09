@@ -1,4 +1,3 @@
-// Configuration - À MODIFIER après déploiement backend
 const API_URL = 'https://success-formation-pointage.vercel.app/api';
 
 const formateurNom = document.getElementById('formateur-nom');
@@ -85,4 +84,67 @@ generateQRBtn.addEventListener('click', async () => {
     
     const baseURL = window.location.origin + window.location.pathname.replace('index.html', '');
     const params = new URLSearchParams(sessionData);
-    const 
+    const signatureURL = `${baseURL}signature.html?${params.toString()}`;
+    
+    qrcodeContainer.innerHTML = '';
+    try {
+        const qrCode = await QRCode.toCanvas(signatureURL, {
+            width: 300,
+            margin: 2,
+            color: {
+                dark: '#667eea',
+                light: '#ffffff'
+            }
+        });
+        qrcodeContainer.appendChild(qrCode);
+        qrCodeData = qrCode;
+        
+        qrSection.classList.remove('hidden');
+        qrValidity.innerHTML = `<strong>${slot.label}</strong><br>Formation: ${formation.value}<br>Formateur: ${formateurPrenom.value} ${formateurNom.value}`;
+        
+        qrSection.scrollIntoView({ behavior: 'smooth' });
+    } catch (error) {
+        console.error('Erreur génération QR:', error);
+        alert('❌ Erreur lors de la génération du QR code');
+    }
+});
+
+downloadQRBtn.addEventListener('click', () => {
+    if (!qrCodeData) return;
+    
+    const link = document.createElement('a');
+    link.download = `QR-Pointage-${sessionData.formation}-${sessionData.creneau}-${sessionData.date}.png`;
+    link.href = qrCodeData.toDataURL();
+    link.click();
+});
+
+async function loadTodayAttendance() {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const response = await fetch(`${API_URL}/attendance/today?date=${today}`);
+        
+        if (!response.ok) throw new Error('Erreur chargement présences');
+        
+        const attendances = await response.json();
+        displayAttendances(attendances);
+    } catch (error) {
+        console.error('Erreur:', error);
+        attendanceList.innerHTML = '<p class="info-text">🔄 Connexion au serveur en cours...</p>';
+    }
+}
+
+function displayAttendances(attendances) {
+    if (!attendances || attendances.length === 0) {
+        attendanceList.innerHTML = '<p class="info-text">Aucune signature enregistrée aujourd\'hui</p>';
+        return;
+    }
+    
+    attendanceList.innerHTML = attendances.map(att => `
+        <div class="attendance-item">
+            <p><strong>👤 ${att.apprenantPrenom} ${att.apprenantNom}</strong></p>
+            <p>📚 ${att.formation} - ${att.creneauLabel}</p>
+            <p>👨‍🏫 Formateur: ${att.formateurPrenom} ${att.formateurNom}</p>
+            <p>🕐 ${new Date(att.timestamp).toLocaleTimeString('fr-FR')}</p>
+        </div>
+    `).join('');
+}
