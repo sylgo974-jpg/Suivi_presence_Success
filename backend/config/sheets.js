@@ -1,5 +1,8 @@
 const { google } = require('googleapis');
-const credentials = require('./suivi-pointage-486908-ca78da824d02.json');
+const credentials = process.env.GOOGLE_CREDENTIALS 
+    ? JSON.parse(process.env.GOOGLE_CREDENTIALS) 
+    : require('./suivi-pointage-486908-ca78da824d02.json');
+
 
 const SHEET_ID = '1Q4eiooEl7l9umlq-cHdQo3dxVssO_s-h6L58eTSwlDw';
 
