@@ -1,5 +1,5 @@
 // Configuration - À MODIFIER après déploiement backend
-const API_URL = 'https://suvi-presence-success.vercel.app/';
+const API_URL = 'https://suvi-presence-success.vercel.app/api';
 ;
 
 const sessionFormateur = document.getElementById('session-formateur');
