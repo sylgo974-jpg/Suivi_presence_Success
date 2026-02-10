@@ -1,5 +1,5 @@
 // Configuration - À MODIFIER après déploiement backend
-const API_URL = 'https://Suivi-presence-Success.vercel.app/api';
+const API_URL = 'https://suivi-presence-success-7kau.vercel.app/';
 ;
 
 const sessionFormateur = document.getElementById('session-formateur');
