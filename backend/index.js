@@ -9,13 +9,18 @@ const PORT = process.env.PORT || 3000;
 // Connexion MongoDB
 const MONGODB_URI = process.env.MONGODB_URI;
 
+let isMongoConnected = false;
+
 if (MONGODB_URI) {
-    mongoose.connect(MONGODB_URI, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true
+    mongoose.connect(MONGODB_URI)
+    .then(() => {
+        console.log('✅ Connecté à MongoDB');
+        isMongoConnected = true;
     })
-    .then(() => console.log('✅ Connecté à MongoDB'))
-    .catch(err => console.error('❌ Erreur MongoDB:', err));
+    .catch(err => {
+        console.error('❌ Erreur MongoDB:', err.message);
+        isMongoConnected = false;
+    });
 } else {
     console.warn('⚠️ MONGODB_URI non défini');
 }
@@ -29,12 +34,12 @@ app.use('/api/attendance', attendanceRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', timestamp: new Date().toISOString() });
+    res.json({ 
+        status: 'OK', 
+        timestamp: new Date().toISOString(),
+        mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    });
 });
-
-// ========================================
-// Modèle et routes Session
-// ========================================
 
 // Modèle Session
 const sessionSchema = new mongoose.Schema({
@@ -50,7 +55,7 @@ const sessionSchema = new mongoose.Schema({
 
 const Session = mongoose.model('Session', sessionSchema);
 
-// Fonction : Générer un code court aléatoire (6 caractères)
+// Générer un code court
 function generateSessionCode() {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
@@ -58,14 +63,21 @@ function generateSessionCode() {
 // Route POST : Créer une session
 app.post('/api/sessions', async (req, res) => {
     try {
+        // Vérifier si MongoDB est connecté
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({ 
+                error: 'Base de données non disponible',
+                readyState: mongoose.connection.readyState,
+                states: {0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting'}
+            });
+        }
+        
         const { formateurNom, formateurPrenom, formation, date, creneau, creneauLabel } = req.body;
         
-        // Validation
         if (!formateurNom || !formateurPrenom || !formation || !date || !creneau) {
             return res.status(400).json({ error: 'Données manquantes' });
         }
         
-        // Générer un code unique
         let sessionCode;
         let isUnique = false;
         let attempts = 0;
@@ -81,7 +93,6 @@ app.post('/api/sessions', async (req, res) => {
             return res.status(500).json({ error: 'Impossible de générer un code unique' });
         }
         
-        // Créer la session
         const session = new Session({
             sessionCode,
             formateurNom,
@@ -103,11 +114,14 @@ app.post('/api/sessions', async (req, res) => {
     }
 });
 
-// Route GET : Récupérer une session par son code
+// Route GET : Récupérer une session
 app.get('/api/sessions/:code', async (req, res) => {
     try {
-        const { code } = req.params;
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({ error: 'Base de données non disponible' });
+        }
         
+        const { code } = req.params;
         const session = await Session.findOne({ sessionCode: code });
         
         if (!session) {
@@ -122,7 +136,6 @@ app.get('/api/sessions/:code', async (req, res) => {
     }
 });
 
-// Démarrage du serveur
 app.listen(PORT, () => {
     console.log(`✅ Serveur démarré sur le port ${PORT}`);
 });
