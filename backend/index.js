@@ -7,14 +7,18 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Connexion MongoDB
-const MONGODB_URI = process.env.MONGODB_URI || 'votre_uri_mongodb';
+const MONGODB_URI = process.env.MONGODB_URI;
 
-mongoose.connect(MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-})
-.then(() => console.log('✅ Connecté à MongoDB'))
-.catch(err => console.error('❌ Erreur MongoDB:', err));
+if (MONGODB_URI) {
+    mongoose.connect(MONGODB_URI, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true
+    })
+    .then(() => console.log('✅ Connecté à MongoDB'))
+    .catch(err => console.error('❌ Erreur MongoDB:', err));
+} else {
+    console.warn('⚠️ MONGODB_URI non défini');
+}
 
 // Middleware
 app.use(cors());
@@ -29,7 +33,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // ========================================
-// 🔧 AJOUT : Modèle et routes Session
+// Modèle et routes Session
 // ========================================
 
 // Modèle Session
@@ -41,7 +45,7 @@ const sessionSchema = new mongoose.Schema({
     date: { type: String, required: true },
     creneau: { type: String, required: true },
     creneauLabel: { type: String, required: true },
-    createdAt: { type: Date, default: Date.now, expires: 86400 } // Expire après 24h
+    createdAt: { type: Date, default: Date.now, expires: 86400 }
 });
 
 const Session = mongoose.model('Session', sessionSchema);
@@ -118,10 +122,7 @@ app.get('/api/sessions/:code', async (req, res) => {
     }
 });
 
-// ========================================
 // Démarrage du serveur
-// ========================================
-
 app.listen(PORT, () => {
     console.log(`✅ Serveur démarré sur le port ${PORT}`);
 });
