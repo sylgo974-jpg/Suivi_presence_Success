@@ -3,7 +3,6 @@ const credentials = process.env.GOOGLE_CREDENTIALS
     ? JSON.parse(process.env.GOOGLE_CREDENTIALS) 
     : require('./suivi-pointage-486908-ca78da824d02.json');
 
-
 const SHEET_ID = '1Q4eiooEl7l9umlq-cHdQo3dxVssO_s-h6L58eTSwlDw';
 
 async function getGoogleSheetsClient() {
@@ -16,6 +15,7 @@ async function getGoogleSheetsClient() {
     return google.sheets({ version: 'v4', auth: client });
 }
 
+// Enregistrer une signature d'apprenant
 async function appendToSheet(data) {
     const sheets = await getGoogleSheetsClient();
     
@@ -38,26 +38,30 @@ async function appendToSheet(data) {
 
     await sheets.spreadsheets.values.append({
         spreadsheetId: SHEET_ID,
-        range: 'Feuille 1!A:N',
+        range: 'Signatures!A:N',
         valueInputOption: 'USER_ENTERED',
         resource: {
             values: [row],
         },
     });
+    
+    console.log(`✅ Signature enregistrée: ${data.apprenantPrenom} ${data.apprenantNom}`);
 }
 
+// Récupérer les présences d'une date donnée
 async function getTodayAttendances(date) {
     const sheets = await getGoogleSheetsClient();
     
     const response = await sheets.spreadsheets.values.get({
         spreadsheetId: SHEET_ID,
-        range: 'Feuille 1!A:N',
+        range: 'Signatures!A:N',
     });
 
     const rows = response.data.values || [];
     
-    // Filtrer par date du jour
+    // Filtrer par date du jour (colonne B = index 1)
     return rows
+        .slice(1) // Ignorer l'en-tête
         .filter(row => row[1] === date)
         .map(row => ({
             timestamp: row[0],
@@ -72,7 +76,72 @@ async function getTodayAttendances(date) {
         }));
 }
 
+// Sauvegarder une session (nouveau)
+async function saveSessions(sessionData) {
+    const sheets = await getGoogleSheetsClient();
+    
+    const row = [
+        sessionData.sessionCode,
+        sessionData.formateurNom,
+        sessionData.formateurPrenom,
+        sessionData.formation,
+        sessionData.date,
+        sessionData.creneau,
+        sessionData.creneauLabel,
+        sessionData.createdAt
+    ];
+
+    await sheets.spreadsheets.values.append({
+        spreadsheetId: SHEET_ID,
+        range: 'Sessions!A:H',
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+            values: [row],
+        },
+    });
+    
+    console.log(`✅ Session sauvegardée: ${sessionData.sessionCode}`);
+}
+
+// Récupérer une session par son code (nouveau)
+async function getSessionByCode(code) {
+    const sheets = await getGoogleSheetsClient();
+    
+    try {
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: SHEET_ID,
+            range: 'Sessions!A:H',
+        });
+
+        const rows = response.data.values || [];
+        
+        // Chercher le code dans la colonne A (index 0)
+        const sessionRow = rows.find(row => row[0] === code);
+        
+        if (!sessionRow) {
+            return null;
+        }
+        
+        return {
+            sessionCode: sessionRow[0],
+            formateurNom: sessionRow[1],
+            formateurPrenom: sessionRow[2],
+            formation: sessionRow[3],
+            date: sessionRow[4],
+            creneau: sessionRow[5],
+            creneauLabel: sessionRow[6],
+            createdAt: sessionRow[7]
+        };
+        
+    } catch (error) {
+        console.error('❌ Erreur recherche session:', error.message);
+        throw error;
+    }
+}
+
 module.exports = {
     appendToSheet,
-    getTodayAttendances
+    getTodayAttendances,
+    saveSessions,
+    getSessionByCode
 };
