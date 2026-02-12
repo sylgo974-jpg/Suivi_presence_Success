@@ -1,6 +1,4 @@
-// Configuration - À MODIFIER après déploiement backend
-const API_URL = 'https://suivi-presence-success.vercel.app/';
-;
+const API_URL = 'https://suivi-presence-success.vercel.app/api';
 
 const sessionFormateur = document.getElementById('session-formateur');
 const sessionFormation = document.getElementById('session-formation');
@@ -34,22 +32,49 @@ resizeCanvas();
 let sessionData = {};
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 Page apprenant chargée');
     loadSessionData();
-    validateSession();
 });
 
-function loadSessionData() {
+async function loadSessionData() {
     const params = new URLSearchParams(window.location.search);
+    const sessionCode = params.get('code');
     
-    sessionData = {
-        formateurNom: params.get('formateurNom') || '',
-        formateurPrenom: params.get('formateurPrenom') || '',
-        formation: params.get('formation') || '',
-        date: params.get('date') || '',
-        creneau: params.get('creneau') || '',
-        creneauLabel: params.get('creneauLabel') || ''
-    };
+    console.log('🔑 Code session:', sessionCode);
     
+    if (sessionCode) {
+        // Nouvelle méthode: Récupérer la session depuis MongoDB via le code
+        try {
+            console.log('🌐 Récupération session depuis API...');
+            const response = await fetch(`${API_URL}/sessions/${sessionCode}`);
+            
+            if (!response.ok) {
+                throw new Error('Session non trouvée ou expirée');
+            }
+            
+            sessionData = await response.json();
+            console.log('✅ Session récupérée:', sessionData);
+            
+        } catch (error) {
+            console.error('❌ Erreur récupération session:', error);
+            showError(`❌ ${error.message}. Le QR code a peut-être expiré (valide 24h).`);
+            disableForm();
+            return;
+        }
+    } else {
+        // Ancienne méthode: Paramètres dans l'URL (fallback)
+        console.log('🔙 Utilisation paramètres URL (ancien mode)');
+        sessionData = {
+            formateurNom: params.get('formateurNom') || '',
+            formateurPrenom: params.get('formateurPrenom') || '',
+            formation: params.get('formation') || '',
+            date: params.get('date') || '',
+            creneau: params.get('creneau') || '',
+            creneauLabel: params.get('creneauLabel') || ''
+        };
+    }
+    
+    // Afficher les données de session
     sessionFormateur.textContent = `${sessionData.formateurPrenom} ${sessionData.formateurNom}`;
     sessionFormation.textContent = sessionData.formation;
     sessionDate.textContent = new Date(sessionData.date).toLocaleDateString('fr-FR', {
@@ -59,6 +84,9 @@ function loadSessionData() {
         day: 'numeric'
     });
     sessionCreneau.textContent = sessionData.creneauLabel;
+    
+    // Valider la session
+    validateSession();
 }
 
 function validateSession() {
@@ -67,6 +95,8 @@ function validateSession() {
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const sessDate = new Date(sessionDate.getFullYear(), sessionDate.getMonth(), sessionDate.getDate());
     
+    console.log('📅 Vérification date - Session:', sessDate, 'Aujourd\'hui:', today);
+    
     if (sessDate.getTime() !== today.getTime()) {
         showError('❌ Ce QR code n\'est valide que pour le ' + sessionDate.toLocaleDateString('fr-FR'));
         disableForm();
@@ -74,6 +104,8 @@ function validateSession() {
     }
     
     const currentSlot = getCurrentSlot();
+    console.log('🕐 Créneau actuel:', currentSlot, '- Créneau session:', sessionData.creneau);
+    
     if (!currentSlot || currentSlot.id !== sessionData.creneau) {
         const message = sessionData.creneau === 'matin' 
             ? '❌ Le pointage du matin est terminé. Ce QR code n\'est plus valide.'
@@ -83,6 +115,7 @@ function validateSession() {
         return false;
     }
     
+    console.log('✅ Session valide');
     return true;
 }
 
@@ -108,9 +141,12 @@ function getCurrentSlot() {
 
 clearBtn.addEventListener('click', () => {
     signaturePad.clear();
+    console.log('🧽 Signature effacée');
 });
 
 submitBtn.addEventListener('click', async () => {
+    console.log('🔘 Bouton Valider cliqué');
+    
     if (!apprenantNom.value.trim() || !apprenantPrenom.value.trim()) {
         alert('⚠️ Veuillez renseigner votre nom et prénom');
         return;
@@ -142,6 +178,11 @@ submitBtn.addEventListener('click', async () => {
             userAgent: navigator.userAgent
         };
         
+        console.log('📤 Envoi signature:', {
+            ...signatureData,
+            signature: '[DATA]' // Ne pas logger la signature complète
+        });
+        
         const response = await fetch(`${API_URL}/attendance/sign`, {
             method: 'POST',
             headers: {
@@ -150,16 +191,19 @@ submitBtn.addEventListener('click', async () => {
             body: JSON.stringify(signatureData)
         });
         
+        console.log('📡 Réponse API:', response.status, response.statusText);
+        
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.message || 'Erreur lors de l\'enregistrement');
         }
         
+        console.log('✅ Signature enregistrée avec succès');
         showSuccess();
         
     } catch (error) {
-        console.error('Erreur:', error);
-        showError(error.message || '❌ Erreur lors de l\'enregistrement. Veuillez réessayer.');
+        console.error('❌ Erreur:', error);
+        showError(error.message || '❌ Erreur lors de l\'enregistrement. Vérifiez la console (F12).');
         submitBtn.disabled = false;
         submitBtn.innerHTML = '✅ Valider ma Présence';
     }
@@ -168,14 +212,18 @@ submitBtn.addEventListener('click', async () => {
 function getLocation() {
     return new Promise((resolve, reject) => {
         if (!navigator.geolocation) {
-            reject(new Error('La géolocalisation n\'est pas supportée par votre navigateur'));
+            console.warn('⚠️ Géolocalisation non supportée');
+            resolve({ coords: { latitude: null, longitude: null } });
             return;
         }
         
         navigator.geolocation.getCurrentPosition(
-            resolve,
+            (position) => {
+                console.log('📍 Position obtenue:', position.coords.latitude, position.coords.longitude);
+                resolve(position);
+            },
             (error) => {
-                console.warn('Géolocalisation refusée:', error);
+                console.warn('⚠️ Géolocalisation refusée:', error.message);
                 resolve({ coords: { latitude: null, longitude: null } });
             },
             { timeout: 5000, enableHighAccuracy: true }
