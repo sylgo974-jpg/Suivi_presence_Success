@@ -1,29 +1,10 @@
 const express = require('express');
 const cors = require('cors');
-const mongoose = require('mongoose');
 const attendanceRoutes = require('./routes/attendance');
+const { saveSessions, getSessionByCode } = require('./config/sheets');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-// Connexion MongoDB
-const MONGODB_URI = process.env.MONGODB_URI;
-
-let isMongoConnected = false;
-
-if (MONGODB_URI) {
-    mongoose.connect(MONGODB_URI)
-    .then(() => {
-        console.log('✅ Connecté à MongoDB');
-        isMongoConnected = true;
-    })
-    .catch(err => {
-        console.error('❌ Erreur MongoDB:', err.message);
-        isMongoConnected = false;
-    });
-} else {
-    console.warn('⚠️ MONGODB_URI non défini');
-}
 
 // Middleware
 app.use(cors());
@@ -37,105 +18,101 @@ app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'OK', 
         timestamp: new Date().toISOString(),
-        mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+        storage: 'Google Sheets'
     });
 });
 
-// Modèle Session
-const sessionSchema = new mongoose.Schema({
-    sessionCode: { type: String, required: true, unique: true, index: true },
-    formateurNom: { type: String, required: true },
-    formateurPrenom: { type: String, required: true },
-    formation: { type: String, required: true },
-    date: { type: String, required: true },
-    creneau: { type: String, required: true },
-    creneauLabel: { type: String, required: true },
-    createdAt: { type: Date, default: Date.now, expires: 86400 }
-});
-
-const Session = mongoose.model('Session', sessionSchema);
-
-// Générer un code court
+// Générer un code court (6 caractères alphanumeriques)
 function generateSessionCode() {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Sans O, 0, I, 1 pour éviter confusion
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
 }
 
 // Route POST : Créer une session
 app.post('/api/sessions', async (req, res) => {
     try {
-        // Vérifier si MongoDB est connecté
-        if (mongoose.connection.readyState !== 1) {
-            return res.status(503).json({ 
-                error: 'Base de données non disponible',
-                readyState: mongoose.connection.readyState,
-                states: {0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting'}
-            });
-        }
-        
         const { formateurNom, formateurPrenom, formation, date, creneau, creneauLabel } = req.body;
         
         if (!formateurNom || !formateurPrenom || !formation || !date || !creneau) {
             return res.status(400).json({ error: 'Données manquantes' });
         }
         
-        let sessionCode;
-        let isUnique = false;
-        let attempts = 0;
+        // Générer un code unique
+        const sessionCode = generateSessionCode();
         
-        while (!isUnique && attempts < 10) {
-            sessionCode = generateSessionCode();
-            const existing = await Session.findOne({ sessionCode });
-            if (!existing) isUnique = true;
-            attempts++;
-        }
-        
-        if (!isUnique) {
-            return res.status(500).json({ error: 'Impossible de générer un code unique' });
-        }
-        
-        const session = new Session({
+        const sessionData = {
             sessionCode,
             formateurNom,
             formateurPrenom,
             formation,
             date,
             creneau,
-            creneauLabel
-        });
+            creneauLabel,
+            createdAt: new Date().toISOString()
+        };
         
-        await session.save();
+        // Sauvegarder dans Google Sheets
+        await saveSessions(sessionData);
         
         console.log(`✅ Session créée: ${sessionCode}`);
         res.json({ sessionCode });
         
     } catch (error) {
         console.error('❌ Erreur création session:', error);
-        res.status(500).json({ error: 'Erreur serveur', details: error.message });
+        res.status(500).json({ 
+            error: 'Erreur serveur', 
+            details: error.message 
+        });
     }
 });
 
-// Route GET : Récupérer une session
+// Route GET : Récupérer une session par son code
 app.get('/api/sessions/:code', async (req, res) => {
     try {
-        if (mongoose.connection.readyState !== 1) {
-            return res.status(503).json({ error: 'Base de données non disponible' });
-        }
-        
         const { code } = req.params;
-        const session = await Session.findOne({ sessionCode: code });
+        
+        console.log(`🔍 Recherche session: ${code}`);
+        
+        const session = await getSessionByCode(code);
         
         if (!session) {
+            console.log(`❌ Session non trouvée: ${code}`);
             return res.status(404).json({ error: 'Session non trouvée ou expirée' });
         }
         
+        // Vérifier si la session a plus de 24h (optionnel)
+        const sessionDate = new Date(session.createdAt);
+        const now = new Date();
+        const hoursDiff = (now - sessionDate) / (1000 * 60 * 60);
+        
+        if (hoursDiff > 24) {
+            console.log(`⏰ Session expirée: ${code} (${hoursDiff.toFixed(1)}h)`);
+            return res.status(404).json({ error: 'Session expirée (valide 24h)' });
+        }
+        
+        console.log(`✅ Session trouvée: ${code}`);
         res.json(session);
         
     } catch (error) {
         console.error('❌ Erreur récupération session:', error);
-        res.status(500).json({ error: 'Erreur serveur' });
+        res.status(500).json({ 
+            error: 'Erreur serveur',
+            details: error.message 
+        });
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`✅ Serveur démarré sur le port ${PORT}`);
-});
+// Export pour Vercel
+module.exports = app;
+
+// Démarrage serveur local uniquement
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`✅ Serveur démarré sur le port ${PORT}`);
+        console.log(`📊 Stockage: Google Sheets uniquement`);
+    });
+}
