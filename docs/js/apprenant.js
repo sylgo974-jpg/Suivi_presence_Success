@@ -15,7 +15,9 @@ const errorText = document.getElementById('error-text');
 const canvas = document.getElementById('signature-pad');
 const signaturePad = new SignaturePad(canvas, {
     backgroundColor: 'rgb(255, 255, 255)',
-    penColor: 'rgb(0, 0, 0)'
+    penColor: 'rgb(0, 0, 139)', // Bleu foncé pour meilleur contraste
+    minWidth: 2.5, // Trait minimum plus épais
+    maxWidth: 4.5  // Trait maximum plus épais
 });
 
 function resizeCanvas() {
@@ -167,21 +169,31 @@ submitBtn.addEventListener('click', async () => {
     try {
         const position = await getLocation();
         
+        // Créer un canvas optimisé pour l'export avec fond blanc garanti
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = canvas.width;
+        exportCanvas.height = canvas.height;
+        const ctx = exportCanvas.getContext('2d');
+        
+        // Remplir avec un fond blanc solide
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+        
+        // Copier la signature par-dessus
+        ctx.drawImage(canvas, 0, 0);
+        
         const signatureData = {
             ...sessionData,
             apprenantNom: apprenantNom.value.trim().toUpperCase(),
             apprenantPrenom: apprenantPrenom.value.trim(),
-            signature: signaturePad.toDataURL(),
+            signature: exportCanvas.toDataURL('image/png', 1.0), // Qualité maximale
             timestamp: new Date().toISOString(),
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
             userAgent: navigator.userAgent
         };
         
-        console.log('📤 Envoi signature:', {
-            ...signatureData,
-            signature: '[DATA]' // Ne pas logger la signature complète
-        });
+        console.log('📤 Envoi signature');
         
         const response = await fetch(`${API_URL}/attendance/sign`, {
             method: 'POST',
