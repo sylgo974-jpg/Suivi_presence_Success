@@ -93,6 +93,71 @@ header h1 {
     margin: 10px 0;
 }
 
+/* ====== Wrapper positioné pour le bouton round ====== */
+.signature-wrapper {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    margin: 20px 0;
+}
+
+/* ====== Cadre de signature avec pointillés pour indiquer la zone ====== */
+.signature-pad-container {
+    border: 3px solid #667eea;
+    border-radius: 10px;
+    background: #fafafa;
+    overflow: hidden;
+    /* Ombre intérieure pour signifier que c'est une zone active protégée */
+    box-shadow: inset 0 0 0 4px rgba(102,126,234,0.12);
+}
+
+#signature-pad {
+    display: block;
+    width: 100%;
+    height: 300px;
+    cursor: crosshair;
+    touch-action: none;
+    /* Bloquer toute propagation de geste hors du canvas */
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* ====== Bouton effacer : rond, petit, positionné en haut à droite du cadre ====== */
+.btn-clear-round {
+    position: absolute;
+    top: -14px;
+    right: -14px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid #eb3349;
+    background: white;
+    color: #eb3349;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(235,51,73,0.25);
+    transition: all 0.2s;
+    z-index: 10;
+    padding: 0;
+}
+
+.btn-clear-round:hover {
+    background: #eb3349;
+    color: white;
+    transform: scale(1.1);
+}
+
+.btn-clear-round:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ====== Boutons actions ====== */
 .btn-primary,
 .btn-secondary {
     width: 100%;
@@ -133,6 +198,10 @@ header h1 {
     color: white;
 }
 
+.signature-actions {
+    margin-top: 0;
+}
+
 .hidden {
     display: none;
 }
@@ -158,28 +227,6 @@ header h1 {
     padding: 15px;
     border-radius: 8px;
     margin: 15px 0;
-}
-
-.signature-pad-container {
-    border: 3px solid #667eea;
-    border-radius: 10px;
-    margin: 20px 0;
-    background: #fafafa;
-    overflow: hidden;
-}
-
-#signature-pad {
-    display: block;
-    width: 100%;
-    height: 300px;
-    cursor: crosshair;
-    touch-action: none;
-}
-
-.signature-actions {
-    display: grid;
-    grid-template-columns: 1fr 2fr;
-    gap: 10px;
 }
 
 .session-info {
