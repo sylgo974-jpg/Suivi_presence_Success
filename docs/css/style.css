@@ -1,356 +1,329 @@
 /* =====================================================
    PALETTE SUCCESS FORMATION
-   Fond        : #f1d7bc
-   Traits      : #ce2a45
-   Texte       : #000000
-   Accent 1    : #fc772c (orange)
-   Accent 2    : #5c646b (gris ardoise)
+   Fond      : #f1d7bc
+   Traits    : #ce2a45
+   Texte     : #000000
+   Accent 1  : #fc772c (orange)
+   Accent 2  : #5c646b (gris ardoise)
    ===================================================== */
 
 :root {
-  --sf-bg:       #f1d7bc;
-  --sf-border:   #ce2a45;
-  --sf-text:     #000000;
-  --sf-orange:   #fc772c;
-  --sf-slate:    #5c646b;
-  --sf-white:    #ffffff;
-  --sf-success:  #2d9e6b;
-  --sf-error:    #ce2a45;
+    --sf-bg: #f1d7bc;
+    --sf-border: #ce2a45;
+    --sf-text: #000000;
+    --sf-orange: #fc772c;
+    --sf-slate: #5c646b;
+    --sf-white: #ffffff;
+    --sf-success: #2d9e6b;
+    --sf-error: #ce2a45;
+    --header-height: 180px;
 }
 
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent; /* Optimisation mobile tactile */
 }
 
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #f1d7bc 0%, #e8c5a0 100%);
-  min-height: 100vh;
-  padding: 20px;
-  color: var(--sf-text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+    background: linear-gradient(135deg, #f1d7bc 0%, #e8c5a0 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    padding: 15px;
+    color: var(--sf-text);
+    line-height: 1.5;
+    font-size: 16px; /* Taille de police de base pour mobile */
 }
 
 .container {
-  max-width: 800px;
-  margin: 0 auto;
+    max-width: 600px;
+    margin: 0 auto;
+    padding-bottom: 30px;
 }
 
 /* ====== Header avec logo ====== */
 header {
-  text-align: center;
-  margin-bottom: 30px;
+    text-align: center;
+    margin-bottom: 25px;
+    padding-top: 10px;
 }
 
 .header-logo {
-  display: block;
-  max-width: 220px;
-  height: auto;
-  margin: 0 auto 16px auto;
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
+    display: block;
+    max-width: 180px;
+    height: auto;
+    margin: 0 auto 12px auto;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
 }
 
 header h1 {
-  font-size: 2rem;
-  margin-bottom: 8px;
-  color: var(--sf-border);
-  text-shadow: 1px 1px 3px rgba(0,0,0,0.15);
+    font-size: 1.6rem;
+    margin-bottom: 6px;
+    color: var(--sf-border);
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
 }
 
 .subtitle {
-  font-size: 1rem;
-  color: var(--sf-slate);
-  font-weight: 500;
+    font-size: 0.95rem;
+    color: var(--sf-slate);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 /* ====== Cards ====== */
 .card {
-  background: var(--sf-white);
-  border-radius: 14px;
-  padding: 28px;
-  margin-bottom: 20px;
-  box-shadow: 0 6px 24px rgba(206,42,69,0.10);
-  border: 2px solid var(--sf-border);
+    background: var(--sf-white);
+    border-radius: 16px;
+    padding: 22px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 30px rgba(206,42,69,0.12);
+    border: 2px solid var(--sf-border);
 }
 
 .card h2 {
-  color: var(--sf-border);
-  margin-bottom: 18px;
-  font-size: 1.4rem;
-  border-bottom: 2px solid var(--sf-bg);
-  padding-bottom: 8px;
+    color: var(--sf-border);
+    margin-bottom: 18px;
+    font-size: 1.25rem;
+    border-bottom: 2px solid var(--sf-bg);
+    padding-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 /* ====== Formulaires ====== */
 .form-group {
-  margin-bottom: 18px;
+    margin-bottom: 20px;
 }
 
 .form-group label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 600;
-  color: var(--sf-slate);
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--sf-slate);
+    font-size: 0.9rem;
 }
 
-.form-group input,
+/* Optimisation des champs pour mobile (éviter le zoom auto sur iOS avec 16px min) */
+.form-group input, 
 .form-group select {
-  width: 100%;
-  padding: 11px 14px;
-  border: 2px solid #ddd;
-  border-radius: 8px;
-  font-size: 15px;
-  color: var(--sf-text);
-  background: #fdfaf7;
-  transition: border-color 0.25s, box-shadow 0.25s;
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 16px;
+    color: var(--sf-text);
+    background: #fdfaf7;
+    transition: all 0.2s ease;
+    appearance: none; /* Uniformisation Android/iOS */
+    -webkit-appearance: none;
 }
 
-.form-group input:focus,
+.form-group input:focus, 
 .form-group select:focus {
-  outline: none;
-  border-color: var(--sf-border);
-  box-shadow: 0 0 0 3px rgba(206,42,69,0.12);
+    outline: none;
+    border-color: var(--sf-border);
+    box-shadow: 0 0 0 4px rgba(206,42,69,0.15);
+    background: #ffffff;
 }
 
 /* ====== Info box ====== */
 .info-box {
-  background: var(--sf-bg);
-  border-left: 4px solid var(--sf-border);
-  padding: 14px 16px;
-  border-radius: 8px;
-  margin: 16px 0;
+    background: var(--sf-bg);
+    border-left: 5px solid var(--sf-border);
+    padding: 16px;
+    border-radius: 12px;
+    margin: 20px 0;
 }
 
 .info-box p {
-  margin: 6px 0;
-  color: var(--sf-text);
+    margin: 8px 0;
+    color: var(--sf-text);
+    font-size: 0.95rem;
 }
 
 .info-text {
-  color: var(--sf-slate);
-  font-size: 0.93rem;
-  margin: 10px 0;
+    color: var(--sf-slate);
+    font-size: 0.9rem;
+    margin: 12px 0;
+    text-align: center;
 }
 
 /* ====== Signature wrapper ====== */
 .signature-wrapper {
-  position: relative;
-  display: inline-block;
-  width: 100%;
-  margin: 18px 0;
+    position: relative;
+    width: 100%;
+    margin: 20px 0;
 }
 
 .signature-pad-container {
-  border: 3px solid var(--sf-border);
-  border-radius: 10px;
-  background: #fdfaf7;
-  overflow: hidden;
-  box-shadow: inset 0 0 0 4px rgba(206,42,69,0.08);
+    border: 3px solid var(--sf-border);
+    border-radius: 14px;
+    background: #ffffff;
+    overflow: hidden;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
 }
 
 #signature-pad {
-  display: block;
-  width: 100%;
-  height: 300px;
-  cursor: crosshair;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
+    display: block;
+    width: 100%;
+    height: 250px;
+    cursor: crosshair;
+    touch-action: none;
 }
 
-/* ====== Bouton effacer rond ====== */
 .btn-clear-round {
-  position: absolute;
-  top: -14px;
-  right: -14px;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 2px solid var(--sf-border);
-  background: var(--sf-white);
-  color: var(--sf-border);
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(206,42,69,0.22);
-  transition: all 0.2s;
-  z-index: 10;
-  padding: 0;
+    position: absolute;
+    top: -12px;
+    right: -12px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 3px solid var(--sf-border);
+    background: var(--sf-white);
+    color: var(--sf-border);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(206,42,69,0.25);
+    z-index: 10;
+    transition: transform 0.2s active;
 }
 
-.btn-clear-round:hover {
-  background: var(--sf-border);
-  color: var(--sf-white);
-  transform: scale(1.1);
-}
-
-.btn-clear-round:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
+.btn-clear-round:active {
+    transform: scale(0.9);
 }
 
 /* ====== Boutons principaux ====== */
-.btn-primary,
-.btn-secondary {
-  width: 100%;
-  padding: 14px;
-  font-size: 1.05rem;
-  font-weight: 700;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.25s;
-  margin-top: 10px;
-  letter-spacing: 0.3px;
+.btn-primary, .btn-secondary {
+    width: 100%;
+    padding: 16px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--sf-border) 0%, var(--sf-orange) 100%);
-  color: var(--sf-white);
-  box-shadow: 0 4px 14px rgba(206,42,69,0.25);
+    background: linear-gradient(135deg, var(--sf-border) 0%, var(--sf-orange) 100%);
+    color: var(--sf-white);
+    box-shadow: 0 6px 20px rgba(206,42,69,0.3);
 }
 
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(206,42,69,0.38);
+.btn-primary:active {
+    transform: scale(0.98);
+    box-shadow: 0 3px 10px rgba(206,42,69,0.2);
 }
 
 .btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
+    background: #cbd5e0;
+    box-shadow: none;
+    cursor: not-allowed;
 }
 
 .btn-secondary {
-  background: var(--sf-white);
-  color: var(--sf-border);
-  border: 2px solid var(--sf-border);
+    background: var(--sf-white);
+    color: var(--sf-border);
+    border: 3px solid var(--sf-border);
 }
 
-.btn-secondary:hover {
-  background: var(--sf-border);
-  color: var(--sf-white);
-}
-
-.signature-actions {
-  margin-top: 0;
-}
-
-/* ====== Utilitaires ====== */
-.hidden {
-  display: none;
+.btn-secondary:active {
+    background: var(--sf-bg);
 }
 
 /* ====== QR Code ====== */
 #qrcode-container {
-  display: flex;
-  justify-content: center;
-  margin: 20px 0;
-  padding: 20px;
-  background: var(--sf-white);
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+    padding: 15px;
+    background: #ffffff;
+    border-radius: 12px;
 }
 
-#qrcode-container canvas,
-#qrcode-container img {
-  border: 3px solid var(--sf-border);
-  border-radius: 10px;
-  padding: 14px;
+#qrcode-container canvas, #qrcode-container img {
+    max-width: 100%;
+    height: auto !important;
+    border: 2px solid var(--sf-bg);
+    padding: 10px;
 }
 
 .qr-info {
-  text-align: center;
-  background: var(--sf-bg);
-  padding: 14px;
-  border-radius: 8px;
-  margin: 14px 0;
-  color: var(--sf-text);
-}
-
-/* ====== Session info ====== */
-.session-info {
-  background: linear-gradient(135deg, rgba(241,215,188,0.6) 0%, rgba(241,215,188,0.3) 100%);
-  border-left: 4px solid var(--sf-slate);
-}
-
-/* ====== Cards succes / erreur ====== */
-.success-card {
-  background: linear-gradient(135deg, #2d9e6b 0%, #44c98d 100%);
-  color: var(--sf-white);
-  text-align: center;
-  border: none;
-}
-
-.success-card h2 {
-  color: var(--sf-white);
-  border-bottom: 2px solid rgba(255,255,255,0.3);
-}
-
-.error-card {
-  background: linear-gradient(135deg, var(--sf-border) 0%, var(--sf-orange) 100%);
-  color: var(--sf-white);
-  text-align: center;
-  border: none;
-}
-
-.error-card h2 {
-  color: var(--sf-white);
-  border-bottom: 2px solid rgba(255,255,255,0.3);
+    text-align: center;
+    background: #fdfaf7;
+    padding: 18px;
+    border-radius: 12px;
+    margin: 15px 0;
+    border: 1px dashed var(--sf-border);
 }
 
 /* ====== Liste presences ====== */
 #attendance-list {
-  max-height: 400px;
-  overflow-y: auto;
+    margin-top: 15px;
 }
 
 .attendance-item {
-  background: var(--sf-bg);
-  padding: 14px;
-  border-radius: 8px;
-  margin-bottom: 10px;
-  border-left: 4px solid var(--sf-orange);
+    background: #fdfaf7;
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    border-left: 6px solid var(--sf-orange);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 .attendance-item p {
-  margin: 4px 0;
-  color: var(--sf-text);
+    margin: 4px 0;
+    font-size: 0.95rem;
 }
 
-/* ====== Responsive ====== */
-@media (max-width: 768px) {
-  header h1 {
-    font-size: 1.5rem;
-  }
-  .header-logo {
-    max-width: 160px;
-  }
-  .card {
-    padding: 18px;
-  }
-  #signature-pad {
-    height: 200px;
-  }
-  .signature-actions {
-    grid-template-columns: 1fr;
-  }
+/* ====== Responsive / Mobile Specific ====== */
+@media (max-width: 480px) {
+    body {
+        padding: 10px;
+    }
+    
+    header h1 {
+        font-size: 1.4rem;
+    }
+    
+    .card {
+        padding: 18px;
+        border-radius: 14px;
+    }
+    
+    #signature-pad {
+        height: 220px;
+    }
 }
 
 /* ====== Loader ====== */
 .loading {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(255,255,255,.4);
-  border-radius: 50%;
-  border-top-color: white;
-  animation: spin 1s ease-in-out infinite;
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Fix iOS smooth scrolling */
+#attendance-list {
+    -webkit-overflow-scrolling: touch;
 }
