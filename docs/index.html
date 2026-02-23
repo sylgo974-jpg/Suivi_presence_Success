@@ -7,7 +7,6 @@
     <link rel="apple-touch-icon" href="img/Logo success Formation rec.PNG">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* Styles supplémentaires pour les listes */
         .form-group select {
             width: 100%;
             padding: 12px 15px;
@@ -21,6 +20,10 @@
         .form-group select:focus {
             border-color: #ce2a45;
             outline: none;
+        }
+        .form-group select option:disabled {
+            color: #aaa;
+            font-style: italic;
         }
         .loading-spinner {
             display: inline-block;
@@ -45,16 +48,14 @@
             margin-top: 8px;
             font-size: 13px;
             color: #555;
-            max-height: 120px;
+            max-height: 150px;
             overflow-y: auto;
         }
-        .apprenants-preview .apprenant-item {
-            padding: 3px 0;
+        .apprenant-item {
+            padding: 4px 0;
             border-bottom: 1px solid #eee;
         }
-        .apprenants-preview .apprenant-item:last-child {
-            border-bottom: none;
-        }
+        .apprenant-item:last-child { border-bottom: none; }
         .badge-count {
             display: inline-block;
             background: #ce2a45;
@@ -64,6 +65,29 @@
             font-size: 12px;
             font-weight: bold;
             margin-left: 6px;
+        }
+        .badge-afc {
+            display: inline-block;
+            background: #e67e22;
+            color: white;
+            border-radius: 10px;
+            padding: 1px 7px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        optgroup {
+            font-weight: bold;
+            color: #333;
+        }
+        .info-jour {
+            background: #eaf4ff;
+            border-left: 4px solid #ce2a45;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 12px;
+            color: #333;
         }
     </style>
 </head>
@@ -78,31 +102,37 @@
         <div class="card">
             <h2><span class="icon">📝</span> Informations Session</h2>
 
-            <!-- Sélection du Formateur -->
+            <!-- Info jour actuel -->
+            <div class="info-jour" id="info-jour">
+                📅 Chargement du jour...
+            </div>
+
+            <!-- Sélection de la Session (Jour + Formation) -->
             <div class="form-group">
+                <label for="session-select">🏫 Session du jour *</label>
+                <select id="session-select" required>
+                    <option value="">⏳ Chargement des sessions...</option>
+                </select>
+            </div>
+
+            <!-- Sélection du Formateur (filtré après choix session) -->
+            <div class="form-group" id="formateur-section" style="display:none;">
                 <label for="formateur-select">👨‍🏫 Formateur *</label>
                 <select id="formateur-select" required>
-                    <option value="">⏳ Chargement des formateurs...</option>
+                    <option value="">-- Sélectionner votre nom --</option>
                 </select>
             </div>
 
             <!-- Champs cachés pour compatibilité avec formateur.js -->
             <input type="hidden" id="formateur-nom">
             <input type="hidden" id="formateur-prenom">
-
-            <!-- Sélection de la Formation -->
-            <div class="form-group">
-                <label for="formation">🏫 Formation *</label>
-                <select id="formation" required>
-                    <option value="">⏳ Chargement des formations...</option>
-                </select>
-            </div>
+            <input type="hidden" id="formation">
 
             <!-- Liste des apprenants attendus -->
             <div class="form-group" id="apprenants-section" style="display:none;">
                 <label>👥 Apprenants attendus <span id="apprenants-count" class="badge-count">0</span></label>
                 <div class="apprenants-preview" id="apprenants-list">
-                    <em>Sélectionnez une formation pour voir les apprenants</em>
+                    <em>Sélectionnez une session pour voir les apprenants</em>
                 </div>
             </div>
 
@@ -111,7 +141,7 @@
                 <p><strong>🕒 Créneau :</strong> <span id="current-slot">Chargement...</span></p>
             </div>
 
-            <button class="btn-primary" id="generate-qr">
+            <button class="btn-primary" id="generate-qr" disabled>
                 <span>🔗</span> Générer QR Code
             </button>
         </div>
@@ -119,11 +149,8 @@
         <div class="card hidden" id="qr-section">
             <h2><span class="icon">📱</span> QR Code de Pointage</h2>
             <p class="info-text">Faites scanner ce code aux apprenants pour qu'ils puissent émarger.</p>
-            
             <div id="qrcode-container"></div>
-
             <div class="qr-info" id="qr-validity"></div>
-
             <button class="btn-secondary" id="download-qr">
                 <span>💾</span> Télécharger l'image
             </button>
@@ -138,55 +165,143 @@
         </div>
     </div>
 
-    <!-- Bibliothèques -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="js/resources-loader.js"></script>
-    <script src="js/formateur.js"></script>
 
-    <!-- Initialisation des listes déroulantes -->
     <script>
     const API_RESOURCES = 'https://suivi-presence-success.vercel.app/api';
-    let apprenantsData = [];
 
-    // 1. Charger les formations au démarrage
-    async function initFormations() {
+    // Correspondance numéro de jour JS -> nom en français
+    const JOURS = {
+        0: null,        // Dimanche - fermé
+        1: 'LUNDI',
+        2: 'MARDI',
+        3: 'MERCREDI',
+        4: 'JEUDI',
+        5: 'VENDREDI',
+        6: null         // Samedi - fermé
+    };
+
+    // Obtenir le jour actuel
+    function getJourActuel() {
+        const now = new Date();
+        return JOURS[now.getDay()] || null;
+    }
+
+    // Charger toutes les ressources et construire la liste des sessions
+    async function initSessions() {
+        const jourActuel = getJourActuel();
+        const infoJourEl = document.getElementById('info-jour');
+        const selectSession = document.getElementById('session-select');
+
+        // Afficher le jour actuel
+        if (jourActuel) {
+            infoJourEl.innerHTML = `📅 Aujourd'hui : <strong>${jourActuel}</strong> — Seules les sessions du jour + AFC sont disponibles`;
+        } else {
+            infoJourEl.innerHTML = `🚫 Pas de cours aujourd'hui (week-end) — Seules les <strong>sessions AFC</strong> sont disponibles`;
+        }
+
         try {
-            const res = await fetch(`${API_RESOURCES}/resources/formations`);
-            const formations = await res.json();
+            // Récupérer toutes les ressources
+            const res = await fetch(`${API_RESOURCES}/resources/all`);
+            const ressources = await res.json();
 
-            const selectFormation = document.getElementById('formation');
-            selectFormation.innerHTML = '<option value="">-- Sélectionner --</option>';
-
-            formations.forEach(f => {
-                const opt = document.createElement('option');
-                opt.value = f;
-                opt.textContent = f;
-                selectFormation.appendChild(opt);
+            // Construire les sessions uniques (Jour + Formation)
+            const sessionsMap = new Map();
+            ressources.forEach(r => {
+                const key = `${r.jour}||${r.formation}`;
+                if (!sessionsMap.has(key)) {
+                    sessionsMap.set(key, { jour: r.jour, formation: r.formation });
+                }
             });
+
+            // Séparer sessions du jour, AFC, et autres
+            const sessionsAujourdHui = [];
+            const sessionsAFC = [];
+
+            sessionsMap.forEach(session => {
+                if (session.jour === 'AFC') {
+                    sessionsAFC.push(session);
+                } else if (jourActuel && session.jour === jourActuel) {
+                    sessionsAujourdHui.push(session);
+                }
+                // Les autres jours sont ignorés
+            });
+
+            // Construire le select avec groupes
+            selectSession.innerHTML = '<option value="">-- Sélectionner une session --</option>';
+
+            // Groupe sessions du jour
+            if (sessionsAujourdHui.length > 0) {
+                const group1 = document.createElement('optgroup');
+                group1.label = `📅 Sessions ${jourActuel || 'du jour'}`;
+                sessionsAujourdHui
+                    .sort((a, b) => a.formation.localeCompare(b.formation))
+                    .forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = JSON.stringify({ jour: s.jour, formation: s.formation });
+                        opt.textContent = `${s.jour} — ${s.formation}`;
+                        group1.appendChild(opt);
+                    });
+                selectSession.appendChild(group1);
+            }
+
+            // Groupe AFC (toujours disponible)
+            if (sessionsAFC.length > 0) {
+                const group2 = document.createElement('optgroup');
+                group2.label = '🔄 Sessions AFC (toujours disponibles)';
+                sessionsAFC
+                    .sort((a, b) => a.formation.localeCompare(b.formation))
+                    .forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = JSON.stringify({ jour: s.jour, formation: s.formation });
+                        opt.textContent = `AFC — ${s.formation} 🔄`;
+                        group2.appendChild(opt);
+                    });
+                selectSession.appendChild(group2);
+            }
+
+            if (sessionsAujourdHui.length === 0 && sessionsAFC.length === 0) {
+                selectSession.innerHTML = '<option value="">Aucune session disponible</option>';
+            }
+
         } catch(e) {
-            console.warn('⚠️  Impossible de charger les formations depuis l\'API, utilisation liste de secours');
-            const selectFormation = document.getElementById('formation');
-            selectFormation.innerHTML = `
-                <option value="">-- Sélectionner --</option>
-                <option value="TLE">TLE</option>
-                <option value="TSMEL">TSMEL</option>
-                <option value="MUM">MUM</option>
-                <option value="AMUM">AMUM</option>
-                <option value="ASCOM">ASCOM</option>
-                <option value="CV">CV</option>
-                <option value="GRAPHISTE">GRAPHISTE</option>
-                <option value="NTC">NTC</option>
-                <option value="REM">REM</option>
-                <option value="FPA">FPA</option>
-            `;
+            console.error('❌ Erreur chargement sessions:', e);
+            selectSession.innerHTML = '<option value="">Erreur de chargement</option>';
+            infoJourEl.innerHTML = '⚠️ Impossible de contacter le serveur';
         }
     }
 
-    // 2. Charger les formateurs au démarrage
-    async function initFormateurs() {
+    // Quand on choisit une session -> charger formateurs + apprenants
+    document.getElementById('session-select').addEventListener('change', async function() {
+        const val = this.value;
+        const formateurSection = document.getElementById('formateur-section');
+        const apprenantsSection = document.getElementById('apprenants-section');
+        const listEl = document.getElementById('apprenants-list');
+        const countEl = document.getElementById('apprenants-count');
+        const btnGenerate = document.getElementById('generate-qr');
+
+        // Reset
+        document.getElementById('formateur-nom').value = '';
+        document.getElementById('formateur-prenom').value = '';
+        document.getElementById('formation').value = '';
+        formateurSection.style.display = 'none';
+        apprenantsSection.style.display = 'none';
+        btnGenerate.disabled = true;
+
+        if (!val) return;
+
+        const { jour, formation } = JSON.parse(val);
+
+        // Mettre à jour le champ caché formation pour formateur.js
+        document.getElementById('formation').value = formation;
+
+        // Charger formateurs filtrés
         try {
-            const res = await fetch(`${API_RESOURCES}/resources/formateurs`);
-            const formateurs = await res.json();
+            const resF = await fetch(
+                `${API_RESOURCES}/resources/formateurs?jour=${encodeURIComponent(jour)}&formation=${encodeURIComponent(formation)}`
+            );
+            const formateurs = await resF.json();
 
             const selectFormateur = document.getElementById('formateur-select');
             selectFormateur.innerHTML = '<option value="">-- Sélectionner votre nom --</option>';
@@ -198,68 +313,51 @@
                 selectFormateur.appendChild(opt);
             });
 
+            formateurSection.style.display = 'block';
         } catch(e) {
-            console.warn('⚠️  Impossible de charger les formateurs');
-            const selectFormateur = document.getElementById('formateur-select');
-            selectFormateur.innerHTML = '<option value="">-- Saisir manuellement --</option>';
+            console.error('❌ Erreur formateurs:', e);
         }
-    }
 
-    // 3. Quand on choisit un formateur, remplir nom/prénom cachés
+        // Charger apprenants filtrés
+        try {
+            const resA = await fetch(
+                `${API_RESOURCES}/resources/apprenants?jour=${encodeURIComponent(jour)}&formation=${encodeURIComponent(formation)}`
+            );
+            const apprenants = await resA.json();
+
+            countEl.textContent = apprenants.length;
+            listEl.innerHTML = apprenants.length > 0
+                ? apprenants.map(nom => `<div class="apprenant-item">👤 ${nom}</div>`).join('')
+                : '<em>Aucun apprenant trouvé</em>';
+
+            apprenantsSection.style.display = 'block';
+        } catch(e) {
+            listEl.innerHTML = '<em>⚠️ Impossible de charger les apprenants</em>';
+        }
+    });
+
+    // Quand on choisit un formateur -> remplir nom/prénom cachés + activer bouton
     document.getElementById('formateur-select').addEventListener('change', function() {
-        const nomComplet = this.value; // Ex: "GORECKI Sylvain"
+        const nomComplet = this.value;
+        const btnGenerate = document.getElementById('generate-qr');
+
         if (!nomComplet) {
             document.getElementById('formateur-nom').value = '';
             document.getElementById('formateur-prenom').value = '';
+            btnGenerate.disabled = true;
             return;
         }
+
         const parts = nomComplet.split(' ');
-        // Conventionnellement: premier mot = NOM, reste = prénom
         document.getElementById('formateur-nom').value = parts[0] || '';
         document.getElementById('formateur-prenom').value = parts.slice(1).join(' ') || parts[0];
+        btnGenerate.disabled = false;
     });
 
-    // 4. Quand on choisit une formation, charger les apprenants
-    document.getElementById('formation').addEventListener('change', async function() {
-        const formation = this.value;
-        const section = document.getElementById('apprenants-section');
-        const listEl = document.getElementById('apprenants-list');
-        const countEl = document.getElementById('apprenants-count');
-
-        if (!formation) {
-            section.style.display = 'none';
-            return;
-        }
-
-        listEl.innerHTML = '<span class="loading-spinner"></span> Chargement des apprenants...';
-        section.style.display = 'block';
-
-        try {
-            const res = await fetch(`${API_RESOURCES}/resources/apprenants?formation=${encodeURIComponent(formation)}`);
-            apprenantsData = await res.json();
-
-            countEl.textContent = apprenantsData.length;
-
-            if (apprenantsData.length === 0) {
-                listEl.innerHTML = '<em>Aucun apprenant trouvé pour cette formation</em>';
-                return;
-            }
-
-            listEl.innerHTML = apprenantsData
-                .map(nom => `<div class="apprenant-item">👤 ${nom}</div>`)
-                .join('');
-
-        } catch(e) {
-            listEl.innerHTML = '<em>⚠️  Impossible de charger les apprenants</em>';
-            console.error(e);
-        }
-    });
-
-    // 5. Initialisation au chargement de la page
-    window.addEventListener('DOMContentLoaded', () => {
-        initFormations();
-        initFormateurs();
-    });
+    // Initialisation
+    window.addEventListener('DOMContentLoaded', initSessions);
     </script>
+
+    <script src="js/formateur.js"></script>
 </body>
 </html>
