@@ -3,22 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Signature Apprenant - Pointage</title>
+    <title>Signature Apprenant - Success Formation</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>✍️ Signature de Présence</h1>
+            <img src="img/logo.png" alt="Success Formation" class="header-logo">
+            <h1>Signature de Presence</h1>
             <p class="subtitle">Pointage conforme Qualiopi</p>
         </header>
 
         <div class="card">
             <div class="info-box session-info">
-                <p><strong>👨‍🏫 Formateur:</strong> <span id="session-formateur"></span></p>
-                <p><strong>📚 Formation:</strong> <span id="session-formation"></span></p>
-                <p><strong>📅 Date:</strong> <span id="session-date"></span></p>
-                <p><strong>🕐 Créneau:</strong> <span id="session-creneau"></span></p>
+                <p><strong>Formateur :</strong> <span id="session-formateur"></span></p>
+                <p><strong>Formation :</strong> <span id="session-formation"></span></p>
+                <p><strong>Date :</strong> <span id="session-date"></span></p>
+                <p><strong>Creneau :</strong> <span id="session-creneau"></span></p>
             </div>
         </div>
 
@@ -31,7 +32,7 @@
             </div>
 
             <div class="form-group">
-                <label for="apprenant-prenom">Votre Prénom *</label>
+                <label for="apprenant-prenom">Votre Prenom *</label>
                 <input type="text" id="apprenant-prenom" placeholder="Ex: Marie" required>
             </div>
         </div>
@@ -40,32 +41,31 @@
             <h2>Votre Signature</h2>
             <p class="info-text">Signez dans le cadre ci-dessous avec votre doigt ou stylet</p>
 
-            <!-- Bouton effacer rond positionné dans l'angle du cadre -->
             <div class="signature-wrapper">
+                <button class="btn-clear-round" id="clear-signature" title="Effacer la signature">&#128465;</button>
                 <div class="signature-pad-container">
-                    <canvas id="signature-pad" width="600" height="300"></canvas>
+                    <canvas id="signature-pad"></canvas>
                 </div>
-                <button id="clear-signature" class="btn-clear-round" title="Effacer la signature">🗑️</button>
             </div>
 
             <div class="signature-actions">
-                <button id="submit-signature" class="btn-primary">✅ Valider ma Présence</button>
+                <button class="btn-primary" id="submit-signature">Valider ma Presence</button>
             </div>
         </div>
 
-        <div id="success-message" class="card success-card hidden">
-            <h2>✅ Présence Enregistrée</h2>
-            <p>Merci ! Votre signature a été enregistrée avec succès.</p>
-            <p class="info-text">Vous pouvez fermer cette page.</p>
+        <div class="card success-card hidden" id="success-message">
+            <h2>Presence Enregistree</h2>
+            <p>Merci ! Votre signature a ete enregistree avec succes.</p>
+            <p>Vous pouvez fermer cette page.</p>
         </div>
 
-        <div id="error-message" class="card error-card hidden">
-            <h2>❌ Erreur</h2>
+        <div class="card error-card hidden" id="error-message">
+            <h2>Erreur</h2>
             <p id="error-text"></p>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
     <script src="js/apprenant.js"></script>
 </body>
 </html>
