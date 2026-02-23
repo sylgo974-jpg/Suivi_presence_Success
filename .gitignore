@@ -1,0 +1,20 @@
+# Variables d'environnement
+.env
+.env.local
+.env.production
+
+# Clés de service Google / credentials
+backend/config/*.json
+*.json.key
+service-account*.json
+
+# Dépendances Node
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
