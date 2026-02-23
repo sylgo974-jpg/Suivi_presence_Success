@@ -15,18 +15,19 @@ const attendanceList = document.getElementById('attendance-list');
 let sessionData = null;
 let qrCodeInstance = null;
 let activeSessionCode = null;
+let listeApprenants = []; // Liste complète des apprenants attendus
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Application Formateur démarrée');
     updateDateTime();
     setInterval(updateDateTime, 60000);
 
-    // Chargement auto des présences toutes les 20s si session active
+    // Rafraîchissement automatique toutes les 10s si session active
     setInterval(() => {
         if (activeSessionCode) {
             loadSessionAttendance(activeSessionCode);
         }
-    }, 20000);
+    }, 10000);
 });
 
 function updateDateTime() {
@@ -38,11 +39,9 @@ function updateDateTime() {
     if (slot) {
         currentSlotEl.textContent = slot.label;
         currentSlotEl.style.color = 'var(--sf-success)';
-        generateQRBtn.disabled = false;
     } else {
         currentSlotEl.textContent = '⚠️ Hors horaires de pointage';
         currentSlotEl.style.color = 'var(--sf-error)';
-        generateQRBtn.disabled = true;
     }
 }
 
@@ -50,16 +49,15 @@ function getCurrentSlot() {
     const now = new Date();
     const day = now.getDay();
     const time = now.getHours() * 60 + now.getMinutes();
-
     if (day === 0 || day === 6) return null;
-
-    if (time >= 510 && time <= 735) { // 8h30 - 12h15
-        return { id: 'matin', label: '🌅 Matin (8h30 - 12h00)' };
-    }
-    if (time >= 780 && time <= 1005) { // 13h00 - 16h45
-        return { id: 'apres-midi', label: '🌆 Après-midi (13h00 - 16h30)' };
-    }
+    if (time >= 510 && time <= 735) return { id: 'matin', label: '🌅 Matin (8h30 - 12h00)' };
+    if (time >= 780 && time <= 1005) return { id: 'apres-midi', label: '🌆 Après-midi (13h00 - 16h30)' };
     return null;
+}
+
+// Fonction appelée depuis index.html quand les apprenants sont chargés
+function setListeApprenants(liste) {
+    listeApprenants = liste || [];
 }
 
 generateQRBtn.addEventListener('click', async () => {
@@ -70,7 +68,7 @@ generateQRBtn.addEventListener('click', async () => {
 
     const slot = getCurrentSlot();
     if (!slot) {
-        alert('⚠️ Le pointage n\'est disponible qu\'aux horaires de formation');
+        alert("⚠️ Le pointage n'est disponible qu'aux horaires de formation");
         return;
     }
 
@@ -98,7 +96,6 @@ generateQRBtn.addEventListener('click', async () => {
         const { sessionCode } = await response.json();
         activeSessionCode = sessionCode;
 
-        // URL pour le QR Code
         const baseURL = window.location.origin + window.location.pathname.replace('index.html', '');
         const signatureURL = `${baseURL}signature.html?code=${sessionCode}`;
 
@@ -121,15 +118,13 @@ generateQRBtn.addEventListener('click', async () => {
 
 function displayQRCode(url) {
     qrcodeContainer.innerHTML = '';
-    
-    // Taille dynamique selon l'écran (max 300px)
     const size = Math.min(window.innerWidth - 80, 300);
 
     qrCodeInstance = new QRCode(qrcodeContainer, {
         text: url,
         width: size,
         height: size,
-        colorDark: "#ce2a45", // Couleur Success Formation
+        colorDark: "#ce2a45",
         colorLight: "#ffffff",
         correctLevel: QRCode.CorrectLevel.H
     });
@@ -142,8 +137,7 @@ function displayQRCode(url) {
     `;
 
     qrSection.classList.remove('hidden');
-    attendanceList.closest('.card').classList.remove('hidden');
-    
+    document.getElementById('attendance-section').classList.remove('hidden');
     qrSection.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -161,24 +155,83 @@ async function loadSessionAttendance(sessionCode) {
     try {
         const today = new Date().toISOString().split('T')[0];
         const response = await fetch(`${API_URL}/attendance/today?date=${today}&sessionCode=${sessionCode}`);
-        
         if (!response.ok) return;
 
         const attendances = await response.json();
-        
-        if (attendances.length === 0) {
-            attendanceList.innerHTML = '<div class="info-text">⏳ En attente de signatures...</div>';
-            return;
-        }
 
-        attendanceList.innerHTML = attendances.map(att => `
-            <div class="attendance-item">
-                <p><strong>👤 ${att.apprenantPrenom} ${att.apprenantNom}</strong></p>
-                <p>⏰ Signé à : ${new Date(att.timestamp).toLocaleTimeString('fr-FR')}</p>
-            </div>
-        `).join('');
+        // Extraire les noms des personnes ayant signé
+        // On compare en normalisant (minuscules, sans accents)
+        const normalise = str => str ? str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() : '';
+
+        const nomsSignes = new Set(
+            attendances.map(att => normalise(`${att.apprenantPrenom} ${att.apprenantNom}`))
+        );
+
+        // Construire les deux listes
+        const presents = attendances; // ceux qui ont signé
+        const absents = listeApprenants.filter(nom => {
+            return !nomsSignes.has(normalise(nom));
+        });
+
+        renderAttendance(presents, absents);
 
     } catch (error) {
         console.error('Erreur chargement présences:', error);
     }
+}
+
+function renderAttendance(presents, absents) {
+    const total = presents.length + absents.length;
+    const pct = total > 0 ? Math.round((presents.length / total) * 100) : 0;
+
+    let html = '';
+
+    // En-tête avec compteurs
+    html += `
+    <div class="attendance-header">
+        <div class="attendance-stats">
+            <span class="stat-present">✅ Présents : <strong>${presents.length}</strong></span>
+            <span class="stat-absent">❌ Absents : <strong>${absents.length}</strong></span>
+            <span class="stat-total">👥 Total : <strong>${total}</strong></span>
+        </div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" style="width:${pct}%"></div>
+        </div>
+        <div class="progress-label">${pct}% de présence</div>
+    </div>`;
+
+    // Section PRESENTS
+    if (presents.length > 0) {
+        html += `<div class="attendance-group">
+            <div class="group-title present-title">✅ Présents (${presents.length})</div>`;
+        presents.forEach(att => {
+            const heure = new Date(att.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            html += `
+            <div class="attendance-item present">
+                <span class="att-nom">👤 ${att.apprenantPrenom} ${att.apprenantNom}</span>
+                <span class="att-heure">⏰ ${heure}</span>
+            </div>`;
+        });
+        html += `</div>`;
+    }
+
+    // Section ABSENTS
+    if (absents.length > 0) {
+        html += `<div class="attendance-group">
+            <div class="group-title absent-title">❌ Pas encore signé (${absents.length})</div>`;
+        absents.forEach(nom => {
+            html += `
+            <div class="attendance-item absent">
+                <span class="att-nom">👤 ${nom}</span>
+                <span class="att-statut">En attente...</span>
+            </div>`;
+        });
+        html += `</div>`;
+    }
+
+    if (presents.length === 0 && absents.length === 0) {
+        html = '<div class="info-text">⏳ En attente de signatures...</div>';
+    }
+
+    attendanceList.innerHTML = html;
 }
