@@ -20,16 +20,14 @@ const signaturePad = new SignaturePad(canvas, {
     maxWidth: 4.5
 });
 
-// ── Resize sécurisé : on ne clear() que si le canvas n'a pas encore de signature ──
+// ── Resize sécurisé : sauvegarde + restauration de la signature ──
 function resizeCanvas() {
     const ratio = Math.max(window.devicePixelRatio || 1, 1);
-    // Sauvegarder les données avant le resize
     const data = signaturePad.toData();
     canvas.width = canvas.offsetWidth * ratio;
     canvas.height = canvas.offsetHeight * ratio;
     canvas.getContext('2d').scale(ratio, ratio);
     signaturePad.clear();
-    // Restaurer la signature après le resize
     if (data && data.length > 0) {
         signaturePad.fromData(data);
     }
@@ -43,8 +41,7 @@ window.addEventListener('resize', () => {
 });
 resizeCanvas();
 
-// ── Bloquer tout scroll/touch sur le body pendant la signature ──
-// pour éviter que le viewport se déplace et efface le canvas
+// Bloquer tout scroll/touch hors du canvas pendant la signature
 document.getElementById('signature-pad').addEventListener('touchstart', (e) => {
     e.stopPropagation();
 }, { passive: false });
@@ -201,9 +198,10 @@ submitBtn.addEventListener('click', async () => {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
             userAgent: navigator.userAgent
+            // sessionCode est déjà inclus via ...sessionData
         };
         
-        console.log('📤 Envoi signature');
+        console.log('📤 Envoi signature avec sessionCode:', signatureData.sessionCode);
         
         const response = await fetch(`${API_URL}/attendance/sign`, {
             method: 'POST',

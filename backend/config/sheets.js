@@ -33,36 +33,54 @@ async function appendToSheet(data) {
         data.latitude || 'N/A',
         data.longitude || 'N/A',
         data.userAgent || 'N/A',
-        data.timestamp
+        data.timestamp,
+        data.sessionCode || ''   // Colonne O : code session pour filtrage
     ];
 
     await sheets.spreadsheets.values.append({
         spreadsheetId: SHEET_ID,
-        range: 'Signatures!A:N',
+        range: 'Signatures!A:O',
         valueInputOption: 'USER_ENTERED',
         resource: {
             values: [row],
         },
     });
     
-    console.log(`✅ Signature enregistrée: ${data.apprenantPrenom} ${data.apprenantNom}`);
+    console.log(`✅ Signature enregistrée: ${data.apprenantPrenom} ${data.apprenantNom} [session: ${data.sessionCode}]`);
 }
 
-// Récupérer les présences d'une date donnée
-async function getTodayAttendances(date) {
+// Récupérer les présences filtrées par sessionCode
+// Si sessionCode est fourni : seulement cette session
+// Sinon (fallback) : toutes les présences du jour (ancien comportement)
+async function getTodayAttendances(date, sessionCode) {
     const sheets = await getGoogleSheetsClient();
     
     const response = await sheets.spreadsheets.values.get({
         spreadsheetId: SHEET_ID,
-        range: 'Signatures!A:N',
+        range: 'Signatures!A:O',
     });
 
     const rows = response.data.values || [];
     
-    // Filtrer par date du jour (colonne B = index 1)
     return rows
         .slice(1) // Ignorer l'en-tête
-        .filter(row => row[1] === date)
+        .filter(row => {
+            const rowDate = row[1];
+            const rowSessionCode = row[14] || ''; // Colonne O
+            
+            if (!rowDate) return false;
+            
+            // Filtrage par date obligatoire
+            if (rowDate !== date) return false;
+            
+            // Si un sessionCode est fourni, filtrer strictement par lui
+            if (sessionCode) {
+                return rowSessionCode === sessionCode;
+            }
+            
+            // Fallback sans sessionCode : retourner toutes les présences du jour
+            return true;
+        })
         .map(row => ({
             timestamp: row[0],
             date: row[1],
@@ -72,11 +90,12 @@ async function getTodayAttendances(date) {
             formateurNom: row[5],
             formateurPrenom: row[6],
             apprenantNom: row[7],
-            apprenantPrenom: row[8]
+            apprenantPrenom: row[8],
+            sessionCode: row[14] || ''
         }));
 }
 
-// Sauvegarder une session (nouveau)
+// Sauvegarder une session
 async function saveSessions(sessionData) {
     const sheets = await getGoogleSheetsClient();
     
@@ -103,7 +122,7 @@ async function saveSessions(sessionData) {
     console.log(`✅ Session sauvegardée: ${sessionData.sessionCode}`);
 }
 
-// Récupérer une session par son code (nouveau)
+// Récupérer une session par son code
 async function getSessionByCode(code) {
     const sheets = await getGoogleSheetsClient();
     
@@ -115,7 +134,6 @@ async function getSessionByCode(code) {
 
         const rows = response.data.values || [];
         
-        // Chercher le code dans la colonne A (index 0)
         const sessionRow = rows.find(row => row[0] === code);
         
         if (!sessionRow) {

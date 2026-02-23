@@ -15,12 +15,19 @@ const attendanceList = document.getElementById('attendance-list');
 let sessionData = null;
 let qrCodeInstance = null;
 
+// ── sessionCode actif : on ne charge les présences QUE pour cette session ──
+let activeSessionCode = null;
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Application démarrée');
     updateDateTime();
     setInterval(updateDateTime, 60000);
-    loadTodayAttendance();
-    setInterval(loadTodayAttendance, 30000);
+    // Pas de chargement automatique au démarrage : attend le QR généré
+    setInterval(() => {
+        if (activeSessionCode) {
+            loadSessionAttendance(activeSessionCode);
+        }
+    }, 30000);
 });
 
 function updateDateTime() {
@@ -110,6 +117,9 @@ generateQRBtn.addEventListener('click', async () => {
         const { sessionCode } = await response.json();
         console.log('✅ Session créée avec code:', sessionCode);
         
+        // ── Mémoriser le code session actif ──
+        activeSessionCode = sessionCode;
+        
         // Construire l'URL complète pour le QR code
         const baseURL = window.location.origin + window.location.pathname.replace('index.html', '');
         const signatureURL = `${baseURL}signature.html?code=${sessionCode}`;
@@ -118,6 +128,9 @@ generateQRBtn.addEventListener('click', async () => {
         
         // Afficher le QR code
         displayQRCode(signatureURL);
+        
+        // Charger immédiatement les présences de cette session (vide au départ)
+        loadSessionAttendance(activeSessionCode);
         
         generateQRBtn.disabled = false;
         generateQRBtn.textContent = '✅ QR Code Généré';
@@ -187,12 +200,14 @@ downloadQRBtn.addEventListener('click', () => {
     }
 });
 
-async function loadTodayAttendance() {
+// ── Chargement des présences UNIQUEMENT pour la session active ──
+async function loadSessionAttendance(sessionCode) {
     try {
         const today = new Date().toISOString().split('T')[0];
-        console.log('📊 Chargement présences du', today);
+        console.log(`📊 Chargement présences session ${sessionCode} du ${today}`);
         
-        const response = await fetch(`${API_URL}/attendance/today?date=${today}`);
+        // On passe le sessionCode en paramètre → le backend filtre
+        const response = await fetch(`${API_URL}/attendance/today?date=${today}&sessionCode=${sessionCode}`);
         
         if (!response.ok) {
             console.warn('⚠️ Erreur chargement présences:', response.status);
@@ -200,19 +215,18 @@ async function loadTodayAttendance() {
         }
         
         const attendances = await response.json();
-        console.log(`✅ ${attendances.length} présence(s) trouvée(s)`);
+        console.log(`✅ ${attendances.length} présence(s) pour la session ${sessionCode}`);
         
         if (attendances.length === 0) {
-            attendanceList.innerHTML = '<p class="info-text">Aucune signature enregistrée pour aujourd\'hui</p>';
+            attendanceList.innerHTML = '<p class="info-text">⏳ En attente de signatures pour cette session...</p>';
             return;
         }
         
-        attendanceList.innerHTML = attendances.map(att => `
+        attendanceList.innerHTML = attendances.map((att, index) => `
             <div class="attendance-item">
                 <p><strong>👤 ${att.apprenantPrenom} ${att.apprenantNom}</strong></p>
                 <p>📚 ${att.formation}</p>
                 <p>🕐 ${att.creneauLabel}</p>
-                <p>👨‍🏫 ${att.formateurPrenom} ${att.formateurNom}</p>
                 <p>⏰ ${new Date(att.timestamp).toLocaleTimeString('fr-FR')}</p>
             </div>
         `).join('');
