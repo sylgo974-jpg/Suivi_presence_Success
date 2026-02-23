@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const attendanceRoutes = require('./routes/attendance');
+const resourcesRoutes = require('./routes/resources');
 const { saveSessions, getSessionByCode } = require('./config/sheets');
 
 const app = express();
@@ -12,6 +13,7 @@ app.use(express.json({ limit: '10mb' }));
 
 // Routes
 app.use('/api/attendance', attendanceRoutes);
+app.use('/api/resources', resourcesRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -22,7 +24,7 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Générer un code court (6 caractères alphanumeriques)
+// Générer un code court (6 caractères alphanumériques)
 function generateSessionCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Sans O, 0, I, 1 pour éviter confusion
     let code = '';
