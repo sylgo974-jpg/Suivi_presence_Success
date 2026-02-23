@@ -2,35 +2,36 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pointage Formateur - Success Formation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Interface Formateur - Success Formation</title>
+    <!-- Favicon pour mobile -->
+    <link rel="apple-touch-icon" href="img/Logo success Formation rec.PNG">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div class="container">
         <header>
-                        <img src="img/Logo success Formation rec.PNG" alt="Success Formation" class="header-logo">
+            <img src="img/Logo success Formation rec.PNG" alt="Success Formation" class="header-logo">
             <h1>Interface d'émargement</h1>
-                        <p class="subtitle">Formateur</p>
+            <p class="subtitle">Espace Formateur</p>
         </header>
 
         <div class="card">
-            <h2>Informations Session</h2>
-
+            <h2><span class="icon">📝</span> Informations Session</h2>
             <div class="form-group">
                 <label for="formateur-nom">Nom du Formateur *</label>
-                <input type="text" id="formateur-nom" placeholder="Ex: DUPONT" required>
+                <input type="text" id="formateur-nom" placeholder="Ex: DUPONT" required autocomplete="family-name">
             </div>
-
+            
             <div class="form-group">
-                <label for="formateur-prenom">Prenom du Formateur *</label>
-                <input type="text" id="formateur-prenom" placeholder="Ex: Jean" required>
+                <label for="formateur-prenom">Prénom du Formateur *</label>
+                <input type="text" id="formateur-prenom" placeholder="Ex: Jean" required autocomplete="given-name">
             </div>
 
             <div class="form-group">
                 <label for="formation">Formation *</label>
                 <select id="formation" required>
-                    <option value="">-- Selectionner une formation --</option>
+                    <option value="">-- Sélectionner --</option>
                     <option value="TP TLE">TP TLE</option>
                     <option value="TP TSMEL">TP TSMEL</option>
                     <option value="TP Conseiller de vente">TP Conseiller de vente</option>
@@ -42,36 +43,43 @@
             </div>
 
             <div class="info-box">
-                <p><strong>Date :</strong> <span id="session-date"></span></p>
-                <p><strong>Creneau :</strong> <span id="session-creneau"></span></p>
+                <p><strong>📅 Date :</strong> <span id="current-date"></span></p>
+                <p><strong>🕒 Créneau :</strong> <span id="current-slot">Chargement...</span></p>
             </div>
 
-            <button class="btn-primary" id="generate-qr">Generer QR Code de Pointage</button>
+            <button class="btn-primary" id="generate-qr">
+                <span>🔗</span> Générer QR Code
+            </button>
         </div>
 
         <div class="card hidden" id="qr-section">
-            <h2>QR Code de Pointage</h2>
-            <p class="info-text">Les apprenants doivent scanner ce QR code pour signer</p>
-
+            <h2><span class="icon">📱</span> QR Code de Pointage</h2>
+            <p class="info-text">Faites scanner ce code aux apprenants pour qu'ils puissent émarger.</p>
+            
             <div id="qrcode-container">
-                <canvas id="qrcode"></canvas>
+                <!-- Le QR Code sera généré ici -->
             </div>
 
-            <div class="qr-info">
-                <p><strong>Valide uniquement pour :</strong> <span id="qr-validity"></span></p>
+            <div class="qr-info" id="qr-validity">
+                <!-- Infos session ici -->
             </div>
 
-            <button class="btn-secondary" id="download-qr">Telecharger QR Code</button>
+            <button class="btn-secondary" id="download-qr">
+                <span>💾</span> Télécharger l'image
+            </button>
         </div>
 
         <div class="card hidden" id="attendance-section">
-            <h2>Presences du jour</h2>
-            <p class="info-text">Les signatures apparaitront ici en temps reel</p>
-            <div id="attendance-list"></div>
+            <h2><span class="icon">👥</span> Présences du jour</h2>
+            <p class="info-text">Les signatures s'affichent en temps réel.</p>
+            <div id="attendance-list">
+                <div class="info-text">⏳ En attente de signatures...</div>
+            </div>
         </div>
     </div>
 
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Bibliothèques -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="js/formateur.js"></script>
 </body>
 </html>
