@@ -14,75 +14,66 @@ const attendanceList = document.getElementById('attendance-list');
 
 let sessionData = null;
 let qrCodeInstance = null;
-
-// ── sessionCode actif : on ne charge les présences QUE pour cette session ──
 let activeSessionCode = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 Application démarrée');
+    console.log('🚀 Application Formateur démarrée');
     updateDateTime();
     setInterval(updateDateTime, 60000);
-    // Pas de chargement automatique au démarrage : attend le QR généré
+
+    // Chargement auto des présences toutes les 20s si session active
     setInterval(() => {
         if (activeSessionCode) {
             loadSessionAttendance(activeSessionCode);
         }
-    }, 30000);
+    }, 20000);
 });
 
 function updateDateTime() {
     const now = new Date();
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     currentDateEl.textContent = now.toLocaleDateString('fr-FR', options);
-    
+
     const slot = getCurrentSlot();
     if (slot) {
         currentSlotEl.textContent = slot.label;
-        currentSlotEl.style.color = '#11998e';
+        currentSlotEl.style.color = 'var(--sf-success)';
         generateQRBtn.disabled = false;
-        generateQRBtn.textContent = '🔗 Générer QR Code de Pointage';
     } else {
         currentSlotEl.textContent = '⚠️ Hors horaires de pointage';
-        currentSlotEl.style.color = '#eb3349';
+        currentSlotEl.style.color = 'var(--sf-error)';
         generateQRBtn.disabled = true;
-        generateQRBtn.textContent = '❌ Hors horaires de pointage';
     }
 }
 
 function getCurrentSlot() {
     const now = new Date();
     const day = now.getDay();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    const time = hours * 60 + minutes;
-    
+    const time = now.getHours() * 60 + now.getMinutes();
+
     if (day === 0 || day === 6) return null;
-    
-    if (time >= 510 && time <= 720) {
+
+    if (time >= 510 && time <= 735) { // 8h30 - 12h15
         return { id: 'matin', label: '🌅 Matin (8h30 - 12h00)' };
     }
-    
-    if (time >= 780 && time <= 990) {
+    if (time >= 780 && time <= 1005) { // 13h00 - 16h45
         return { id: 'apres-midi', label: '🌆 Après-midi (13h00 - 16h30)' };
     }
-    
     return null;
 }
 
 generateQRBtn.addEventListener('click', async () => {
-    console.log('🔘 Bouton Générer QR cliqué');
-    
     if (!formateurNom.value.trim() || !formateurPrenom.value.trim() || !formation.value) {
         alert('⚠️ Veuillez remplir tous les champs obligatoires');
         return;
     }
-    
+
     const slot = getCurrentSlot();
     if (!slot) {
-        alert('⚠️ Le pointage n\'est pas disponible en dehors des horaires de formation');
+        alert('⚠️ Le pointage n\'est disponible qu\'aux horaires de formation');
         return;
     }
-    
+
     sessionData = {
         formateurNom: formateurNom.value.trim().toUpperCase(),
         formateurPrenom: formateurPrenom.value.trim(),
@@ -91,148 +82,103 @@ generateQRBtn.addEventListener('click', async () => {
         creneau: slot.id,
         creneauLabel: slot.label
     };
-    
-    console.log('📤 Données session:', sessionData);
-    
+
     try {
         generateQRBtn.disabled = true;
         generateQRBtn.innerHTML = '<span class="loading"></span> Génération...';
-        
-        console.log('🌐 Appel API:', `${API_URL}/sessions`);
-        
+
         const response = await fetch(`${API_URL}/sessions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(sessionData)
         });
-        
-        console.log('📡 Réponse API:', response.status, response.statusText);
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('❌ Erreur API:', errorData);
-            throw new Error(errorData.error || 'Erreur création session');
-        }
-        
+
+        if (!response.ok) throw new Error('Erreur lors de la création de la session');
+
         const { sessionCode } = await response.json();
-        console.log('✅ Session créée avec code:', sessionCode);
-        
-        // ── Mémoriser le code session actif ──
         activeSessionCode = sessionCode;
-        
-        // Construire l'URL complète pour le QR code
+
+        // URL pour le QR Code
         const baseURL = window.location.origin + window.location.pathname.replace('index.html', '');
         const signatureURL = `${baseURL}signature.html?code=${sessionCode}`;
-        
-        console.log('🔗 URL signature:', signatureURL);
-        
-        // Afficher le QR code
+
         displayQRCode(signatureURL);
-        
-        // Charger immédiatement les présences de cette session (vide au départ)
         loadSessionAttendance(activeSessionCode);
-        
-        generateQRBtn.disabled = false;
-        generateQRBtn.textContent = '✅ QR Code Généré';
-        
+
+        generateQRBtn.innerHTML = '✅ QR Code Généré';
+        setTimeout(() => {
+            generateQRBtn.innerHTML = '<span>🔗</span> Mettre à jour le QR Code';
+            generateQRBtn.disabled = false;
+        }, 3000);
+
     } catch (error) {
-        console.error('❌ Erreur génération QR:', error);
-        alert(`❌ Erreur: ${error.message}\n\nVérifiez la console (F12) pour plus de détails.`);
+        console.error('Erreur:', error);
+        alert(`❌ Erreur: ${error.message}`);
         generateQRBtn.disabled = false;
-        generateQRBtn.textContent = '🔗 Générer QR Code de Pointage';
+        generateQRBtn.innerHTML = '<span>🔗</span> Réessayer';
     }
 });
 
 function displayQRCode(url) {
-    // Nettoyer le conteneur
     qrcodeContainer.innerHTML = '';
     
-    // Créer le QR code
+    // Taille dynamique selon l'écran (max 300px)
+    const size = Math.min(window.innerWidth - 80, 300);
+
     qrCodeInstance = new QRCode(qrcodeContainer, {
         text: url,
-        width: 300,
-        height: 300,
-        colorDark: '#667eea',
-        colorLight: '#ffffff',
+        width: size,
+        height: size,
+        colorDark: "#ce2a45", // Couleur Success Formation
+        colorLight: "#ffffff",
         correctLevel: QRCode.CorrectLevel.H
     });
-    
-    // Afficher les informations
+
     qrValidity.innerHTML = `
         <strong>📅 ${sessionData.date}</strong><br>
         <strong>${sessionData.creneauLabel}</strong><br>
         <strong>📚 ${sessionData.formation}</strong><br>
         <strong>👨‍🏫 ${sessionData.formateurPrenom} ${sessionData.formateurNom}</strong>
     `;
-    
-    // Afficher la section QR
+
     qrSection.classList.remove('hidden');
-    qrSection.scrollIntoView({ behavior: 'smooth' });
+    attendanceList.closest('.card').classList.remove('hidden');
     
-    console.log('✅ QR Code affiché');
+    qrSection.scrollIntoView({ behavior: 'smooth' });
 }
 
 downloadQRBtn.addEventListener('click', () => {
-    try {
-        const canvas = qrcodeContainer.querySelector('canvas');
-        if (!canvas) {
-            const img = qrcodeContainer.querySelector('img');
-            if (img) {
-                const link = document.createElement('a');
-                link.download = `QR-Pointage-${sessionData.formation}-${sessionData.date}-${sessionData.creneau}.png`;
-                link.href = img.src;
-                link.click();
-            }
-        } else {
-            canvas.toBlob((blob) => {
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.download = `QR-Pointage-${sessionData.formation}-${sessionData.date}-${sessionData.creneau}.png`;
-                link.href = url;
-                link.click();
-                URL.revokeObjectURL(url);
-            });
-        }
-        console.log('💾 QR Code téléchargé');
-    } catch (error) {
-        console.error('❌ Erreur téléchargement:', error);
-        alert('Erreur lors du téléchargement du QR code');
+    const canvas = qrcodeContainer.querySelector('canvas');
+    if (canvas) {
+        const link = document.createElement('a');
+        link.download = `QR-Success-${sessionData.formation}-${sessionData.date}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
     }
 });
 
-// ── Chargement des présences UNIQUEMENT pour la session active ──
 async function loadSessionAttendance(sessionCode) {
     try {
         const today = new Date().toISOString().split('T')[0];
-        console.log(`📊 Chargement présences session ${sessionCode} du ${today}`);
-        
-        // On passe le sessionCode en paramètre → le backend filtre
         const response = await fetch(`${API_URL}/attendance/today?date=${today}&sessionCode=${sessionCode}`);
         
-        if (!response.ok) {
-            console.warn('⚠️ Erreur chargement présences:', response.status);
-            return;
-        }
-        
+        if (!response.ok) return;
+
         const attendances = await response.json();
-        console.log(`✅ ${attendances.length} présence(s) pour la session ${sessionCode}`);
         
         if (attendances.length === 0) {
-            attendanceList.innerHTML = '<p class="info-text">⏳ En attente de signatures pour cette session...</p>';
+            attendanceList.innerHTML = '<div class="info-text">⏳ En attente de signatures...</div>';
             return;
         }
-        
-        attendanceList.innerHTML = attendances.map((att, index) => `
+
+        attendanceList.innerHTML = attendances.map(att => `
             <div class="attendance-item">
                 <p><strong>👤 ${att.apprenantPrenom} ${att.apprenantNom}</strong></p>
-                <p>📚 ${att.formation}</p>
-                <p>🕐 ${att.creneauLabel}</p>
-                <p>⏰ ${new Date(att.timestamp).toLocaleTimeString('fr-FR')}</p>
+                <p>⏰ Signé à : ${new Date(att.timestamp).toLocaleTimeString('fr-FR')}</p>
             </div>
         `).join('');
-        
+
     } catch (error) {
-        console.error('❌ Erreur chargement présences:', error);
-        attendanceList.innerHTML = '<p class="info-text">Erreur de chargement des présences</p>';
+        console.error('Erreur chargement présences:', error);
     }
 }
