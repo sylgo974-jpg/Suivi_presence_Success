@@ -40,12 +40,15 @@
             <h2>Votre Signature</h2>
             <p class="info-text">Signez dans le cadre ci-dessous avec votre doigt ou stylet</p>
 
-            <div class="signature-pad-container">
-                <canvas id="signature-pad" width="600" height="300"></canvas>
+            <!-- Bouton effacer rond positionné dans l'angle du cadre -->
+            <div class="signature-wrapper">
+                <div class="signature-pad-container">
+                    <canvas id="signature-pad" width="600" height="300"></canvas>
+                </div>
+                <button id="clear-signature" class="btn-clear-round" title="Effacer la signature">🗑️</button>
             </div>
 
             <div class="signature-actions">
-                <button id="clear-signature" class="btn-secondary">🔄 Effacer</button>
                 <button id="submit-signature" class="btn-primary">✅ Valider ma Présence</button>
             </div>
         </div>
