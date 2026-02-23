@@ -15,21 +15,39 @@ const errorText = document.getElementById('error-text');
 const canvas = document.getElementById('signature-pad');
 const signaturePad = new SignaturePad(canvas, {
     backgroundColor: 'rgb(255, 255, 255)',
-    penColor: 'rgb(0, 0, 139)', // Bleu foncé pour meilleur contraste
-    minWidth: 2.5, // Trait minimum plus épais
-    maxWidth: 4.5  // Trait maximum plus épais
+    penColor: 'rgb(0, 0, 139)',
+    minWidth: 2.5,
+    maxWidth: 4.5
 });
 
+// ── Resize sécurisé : on ne clear() que si le canvas n'a pas encore de signature ──
 function resizeCanvas() {
     const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    // Sauvegarder les données avant le resize
+    const data = signaturePad.toData();
     canvas.width = canvas.offsetWidth * ratio;
     canvas.height = canvas.offsetHeight * ratio;
     canvas.getContext('2d').scale(ratio, ratio);
     signaturePad.clear();
+    // Restaurer la signature après le resize
+    if (data && data.length > 0) {
+        signaturePad.fromData(data);
+    }
 }
 
-window.addEventListener('resize', resizeCanvas);
+// Debounce pour éviter les appels trop fréquents au resize
+let resizeTimer;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(resizeCanvas, 250);
+});
 resizeCanvas();
+
+// ── Bloquer tout scroll/touch sur le body pendant la signature ──
+// pour éviter que le viewport se déplace et efface le canvas
+document.getElementById('signature-pad').addEventListener('touchstart', (e) => {
+    e.stopPropagation();
+}, { passive: false });
 
 let sessionData = {};
 
@@ -45,7 +63,6 @@ async function loadSessionData() {
     console.log('🔑 Code session:', sessionCode);
     
     if (sessionCode) {
-        // Nouvelle méthode: Récupérer la session depuis MongoDB via le code
         try {
             console.log('🌐 Récupération session depuis API...');
             const response = await fetch(`${API_URL}/sessions/${sessionCode}`);
@@ -64,7 +81,6 @@ async function loadSessionData() {
             return;
         }
     } else {
-        // Ancienne méthode: Paramètres dans l'URL (fallback)
         console.log('🔙 Utilisation paramètres URL (ancien mode)');
         sessionData = {
             formateurNom: params.get('formateurNom') || '',
@@ -76,7 +92,6 @@ async function loadSessionData() {
         };
     }
     
-    // Afficher les données de session
     sessionFormateur.textContent = `${sessionData.formateurPrenom} ${sessionData.formateurNom}`;
     sessionFormation.textContent = sessionData.formation;
     sessionDate.textContent = new Date(sessionData.date).toLocaleDateString('fr-FR', {
@@ -87,7 +102,6 @@ async function loadSessionData() {
     });
     sessionCreneau.textContent = sessionData.creneauLabel;
     
-    // Valider la session
     validateSession();
 }
 
@@ -169,24 +183,20 @@ submitBtn.addEventListener('click', async () => {
     try {
         const position = await getLocation();
         
-        // Créer un canvas optimisé pour l'export avec fond blanc garanti
         const exportCanvas = document.createElement('canvas');
         exportCanvas.width = canvas.width;
         exportCanvas.height = canvas.height;
         const ctx = exportCanvas.getContext('2d');
         
-        // Remplir avec un fond blanc solide
         ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-        
-        // Copier la signature par-dessus
         ctx.drawImage(canvas, 0, 0);
         
         const signatureData = {
             ...sessionData,
             apprenantNom: apprenantNom.value.trim().toUpperCase(),
             apprenantPrenom: apprenantPrenom.value.trim(),
-            signature: exportCanvas.toDataURL('image/png', 1.0), // Qualité maximale
+            signature: exportCanvas.toDataURL('image/png', 1.0),
             timestamp: new Date().toISOString(),
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
