@@ -1,305 +1,356 @@
+/* =====================================================
+   PALETTE SUCCESS FORMATION
+   Fond        : #f1d7bc
+   Traits      : #ce2a45
+   Texte       : #000000
+   Accent 1    : #fc772c (orange)
+   Accent 2    : #5c646b (gris ardoise)
+   ===================================================== */
+
+:root {
+  --sf-bg:       #f1d7bc;
+  --sf-border:   #ce2a45;
+  --sf-text:     #000000;
+  --sf-orange:   #fc772c;
+  --sf-slate:    #5c646b;
+  --sf-white:    #ffffff;
+  --sf-success:  #2d9e6b;
+  --sf-error:    #ce2a45;
+}
+
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-    padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #f1d7bc 0%, #e8c5a0 100%);
+  min-height: 100vh;
+  padding: 20px;
+  color: var(--sf-text);
 }
 
 .container {
-    max-width: 800px;
-    margin: 0 auto;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
+/* ====== Header avec logo ====== */
 header {
-    text-align: center;
-    color: white;
-    margin-bottom: 30px;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.header-logo {
+  display: block;
+  max-width: 220px;
+  height: auto;
+  margin: 0 auto 16px auto;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
 }
 
 header h1 {
-    font-size: 2.5rem;
-    margin-bottom: 10px;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  font-size: 2rem;
+  margin-bottom: 8px;
+  color: var(--sf-border);
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.15);
 }
 
 .subtitle {
-    font-size: 1.1rem;
-    opacity: 0.9;
+  font-size: 1rem;
+  color: var(--sf-slate);
+  font-weight: 500;
 }
 
+/* ====== Cards ====== */
 .card {
-    background: white;
-    border-radius: 15px;
-    padding: 30px;
-    margin-bottom: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  background: var(--sf-white);
+  border-radius: 14px;
+  padding: 28px;
+  margin-bottom: 20px;
+  box-shadow: 0 6px 24px rgba(206,42,69,0.10);
+  border: 2px solid var(--sf-border);
 }
 
 .card h2 {
-    color: #667eea;
-    margin-bottom: 20px;
-    font-size: 1.5rem;
+  color: var(--sf-border);
+  margin-bottom: 18px;
+  font-size: 1.4rem;
+  border-bottom: 2px solid var(--sf-bg);
+  padding-bottom: 8px;
 }
 
+/* ====== Formulaires ====== */
 .form-group {
-    margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .form-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-    color: #333;
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--sf-slate);
 }
 
 .form-group input,
 .form-group select {
-    width: 100%;
-    padding: 12px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 16px;
-    transition: border-color 0.3s;
+  width: 100%;
+  padding: 11px 14px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+  color: var(--sf-text);
+  background: #fdfaf7;
+  transition: border-color 0.25s, box-shadow 0.25s;
 }
 
 .form-group input:focus,
 .form-group select:focus {
-    outline: none;
-    border-color: #667eea;
+  outline: none;
+  border-color: var(--sf-border);
+  box-shadow: 0 0 0 3px rgba(206,42,69,0.12);
 }
 
+/* ====== Info box ====== */
 .info-box {
-    background: #f5f7ff;
-    border-left: 4px solid #667eea;
-    padding: 15px;
-    border-radius: 8px;
-    margin: 20px 0;
+  background: var(--sf-bg);
+  border-left: 4px solid var(--sf-border);
+  padding: 14px 16px;
+  border-radius: 8px;
+  margin: 16px 0;
 }
 
 .info-box p {
-    margin: 8px 0;
-    color: #333;
+  margin: 6px 0;
+  color: var(--sf-text);
 }
 
 .info-text {
-    color: #666;
-    font-size: 0.95rem;
-    margin: 10px 0;
+  color: var(--sf-slate);
+  font-size: 0.93rem;
+  margin: 10px 0;
 }
 
-/* ====== Wrapper positioné pour le bouton round ====== */
+/* ====== Signature wrapper ====== */
 .signature-wrapper {
-    position: relative;
-    display: inline-block;
-    width: 100%;
-    margin: 20px 0;
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  margin: 18px 0;
 }
 
-/* ====== Cadre de signature avec pointillés pour indiquer la zone ====== */
 .signature-pad-container {
-    border: 3px solid #667eea;
-    border-radius: 10px;
-    background: #fafafa;
-    overflow: hidden;
-    /* Ombre intérieure pour signifier que c'est une zone active protégée */
-    box-shadow: inset 0 0 0 4px rgba(102,126,234,0.12);
+  border: 3px solid var(--sf-border);
+  border-radius: 10px;
+  background: #fdfaf7;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 4px rgba(206,42,69,0.08);
 }
 
 #signature-pad {
-    display: block;
-    width: 100%;
-    height: 300px;
-    cursor: crosshair;
-    touch-action: none;
-    /* Bloquer toute propagation de geste hors du canvas */
-    user-select: none;
-    -webkit-user-select: none;
+  display: block;
+  width: 100%;
+  height: 300px;
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-/* ====== Bouton effacer : rond, petit, positionné en haut à droite du cadre ====== */
+/* ====== Bouton effacer rond ====== */
 .btn-clear-round {
-    position: absolute;
-    top: -14px;
-    right: -14px;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 2px solid #eb3349;
-    background: white;
-    color: #eb3349;
-    font-size: 16px;
-    line-height: 1;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 8px rgba(235,51,73,0.25);
-    transition: all 0.2s;
-    z-index: 10;
-    padding: 0;
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--sf-border);
+  background: var(--sf-white);
+  color: var(--sf-border);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(206,42,69,0.22);
+  transition: all 0.2s;
+  z-index: 10;
+  padding: 0;
 }
 
 .btn-clear-round:hover {
-    background: #eb3349;
-    color: white;
-    transform: scale(1.1);
+  background: var(--sf-border);
+  color: var(--sf-white);
+  transform: scale(1.1);
 }
 
 .btn-clear-round:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    transform: none;
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
 }
 
-/* ====== Boutons actions ====== */
+/* ====== Boutons principaux ====== */
 .btn-primary,
 .btn-secondary {
-    width: 100%;
-    padding: 15px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s;
-    margin-top: 10px;
+  width: 100%;
+  padding: 14px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s;
+  margin-top: 10px;
+  letter-spacing: 0.3px;
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+  background: linear-gradient(135deg, var(--sf-border) 0%, var(--sf-orange) 100%);
+  color: var(--sf-white);
+  box-shadow: 0 4px 14px rgba(206,42,69,0.25);
 }
 
 .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(206,42,69,0.38);
 }
 
 .btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .btn-secondary {
-    background: white;
-    color: #667eea;
-    border: 2px solid #667eea;
+  background: var(--sf-white);
+  color: var(--sf-border);
+  border: 2px solid var(--sf-border);
 }
 
 .btn-secondary:hover {
-    background: #667eea;
-    color: white;
+  background: var(--sf-border);
+  color: var(--sf-white);
 }
 
 .signature-actions {
-    margin-top: 0;
+  margin-top: 0;
 }
 
+/* ====== Utilitaires ====== */
 .hidden {
-    display: none;
+  display: none;
 }
 
+/* ====== QR Code ====== */
 #qrcode-container {
-    display: flex;
-    justify-content: center;
-    margin: 20px 0;
-    padding: 20px;
-    background: white;
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+  padding: 20px;
+  background: var(--sf-white);
 }
 
 #qrcode-container canvas,
 #qrcode-container img {
-    border: 3px solid #667eea;
-    border-radius: 10px;
-    padding: 15px;
+  border: 3px solid var(--sf-border);
+  border-radius: 10px;
+  padding: 14px;
 }
 
 .qr-info {
-    text-align: center;
-    background: #fff8e1;
-    padding: 15px;
-    border-radius: 8px;
-    margin: 15px 0;
+  text-align: center;
+  background: var(--sf-bg);
+  padding: 14px;
+  border-radius: 8px;
+  margin: 14px 0;
+  color: var(--sf-text);
 }
 
+/* ====== Session info ====== */
 .session-info {
-    background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
-    border-left: 4px solid #764ba2;
+  background: linear-gradient(135deg, rgba(241,215,188,0.6) 0%, rgba(241,215,188,0.3) 100%);
+  border-left: 4px solid var(--sf-slate);
 }
 
+/* ====== Cards succes / erreur ====== */
 .success-card {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    color: white;
-    text-align: center;
+  background: linear-gradient(135deg, #2d9e6b 0%, #44c98d 100%);
+  color: var(--sf-white);
+  text-align: center;
+  border: none;
 }
 
 .success-card h2 {
-    color: white;
+  color: var(--sf-white);
+  border-bottom: 2px solid rgba(255,255,255,0.3);
 }
 
 .error-card {
-    background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
-    color: white;
-    text-align: center;
+  background: linear-gradient(135deg, var(--sf-border) 0%, var(--sf-orange) 100%);
+  color: var(--sf-white);
+  text-align: center;
+  border: none;
 }
 
 .error-card h2 {
-    color: white;
+  color: var(--sf-white);
+  border-bottom: 2px solid rgba(255,255,255,0.3);
 }
 
+/* ====== Liste presences ====== */
 #attendance-list {
-    max-height: 400px;
-    overflow-y: auto;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .attendance-item {
-    background: #f5f7ff;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    border-left: 4px solid #667eea;
+  background: var(--sf-bg);
+  padding: 14px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  border-left: 4px solid var(--sf-orange);
 }
 
 .attendance-item p {
-    margin: 5px 0;
-    color: #333;
+  margin: 4px 0;
+  color: var(--sf-text);
 }
 
+/* ====== Responsive ====== */
 @media (max-width: 768px) {
-    header h1 {
-        font-size: 1.8rem;
-    }
-
-    .card {
-        padding: 20px;
-    }
-
-    #signature-pad {
-        height: 200px;
-    }
-
-    .signature-actions {
-        grid-template-columns: 1fr;
-    }
+  header h1 {
+    font-size: 1.5rem;
+  }
+  .header-logo {
+    max-width: 160px;
+  }
+  .card {
+    padding: 18px;
+  }
+  #signature-pad {
+    height: 200px;
+  }
+  .signature-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
+/* ====== Loader ====== */
 .loading {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 3px solid rgba(255,255,255,.3);
-    border-radius: 50%;
-    border-top-color: white;
-    animation: spin 1s ease-in-out infinite;
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255,255,255,.4);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+  to { transform: rotate(360deg); }
 }
