@@ -4,9 +4,100 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Signature Apprenant - Success Formation</title>
-    <!-- Favicon pour mobile -->
     <link rel="apple-touch-icon" href="img/Logo success Formation rec.PNG">
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* === LISTE PRÉSENCES === */
+        .presence-section {
+            margin-bottom: 16px;
+        }
+        .presence-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        .presence-stats {
+            display: flex;
+            gap: 10px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .stat-present { color: #27ae60; }
+        .stat-absent  { color: #e74c3c; }
+        .progress-bar-container {
+            background: #f0f0f0;
+            border-radius: 20px;
+            height: 8px;
+            overflow: hidden;
+            margin-bottom: 4px;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #27ae60, #2ecc71);
+            border-radius: 20px;
+            transition: width 0.6s ease;
+        }
+        .progress-label {
+            font-size: 11px;
+            color: #888;
+            text-align: right;
+            margin-bottom: 10px;
+        }
+        .presence-list {
+            max-height: 220px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .presence-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 9px 12px;
+            font-size: 14px;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.4s, color 0.4s;
+        }
+        .presence-item:last-child { border-bottom: none; }
+        .presence-item.present {
+            background: #f0faf4;
+            border-left: 3px solid #27ae60;
+        }
+        .presence-item.absent {
+            background: #fff;
+            border-left: 3px solid #e0e0e0;
+            color: #999;
+        }
+        .presence-item.moi {
+            border-left: 3px solid #ce2a45 !important;
+            background: #fff5f7 !important;
+            color: #ce2a45 !important;
+            font-weight: 700;
+        }
+        .item-nom { font-weight: 500; }
+        .item-heure { font-size: 12px; color: #27ae60; font-weight: 600; white-space: nowrap; }
+        .item-attente { font-size: 12px; color: #bbb; font-style: italic; }
+        .refresh-info {
+            font-size: 11px;
+            color: #aaa;
+            text-align: center;
+            margin-top: 6px;
+        }
+        /* === FORMULAIRE SIGNATURE === */
+        .signed-already {
+            background: #eafaf1;
+            border: 2px solid #27ae60;
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+            color: #27ae60;
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -16,6 +107,7 @@
             <p class="subtitle">Pointage conforme Qualiopi</p>
         </header>
 
+        <!-- Infos session -->
         <div class="card">
             <div class="info-box session-info">
                 <p><strong>👨‍🏫 Formateur :</strong> <span id="session-formateur">...</span></p>
@@ -25,56 +117,80 @@
             </div>
         </div>
 
-        <div class="card">
-            <h2><span class="icon">👤</span> Vos Informations</h2>
-            <div class="form-group">
-                <label for="apprenant-nom">Votre Nom *</label>
-                <input type="text" id="apprenant-nom" placeholder="Ex: MARTIN" required autocomplete="family-name">
-            </div>
-            <div class="form-group">
-                <label for="apprenant-prenom">Votre Prénom *</label>
-                <input type="text" id="apprenant-prenom" placeholder="Ex: Marie" required autocomplete="given-name">
+        <!-- Liste des présences (mise à jour auto) -->
+        <div class="card" id="presence-card" style="display:none;">
+            <h2><span class="icon">👥</span> Présences <span id="refresh-label" style="font-size:12px;color:#aaa;font-weight:normal;">🔄 auto</span></h2>
+            <div class="presence-section">
+                <div class="presence-header">
+                    <div class="presence-stats">
+                        <span class="stat-present">✅ <span id="count-present">0</span> présents</span>
+                        <span class="stat-absent">❌ <span id="count-absent">0</span> absents</span>
+                    </div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+                </div>
+                <div class="progress-label" id="progress-label">0% de présence</div>
+                <div class="presence-list" id="presence-list">
+                    <div style="padding:12px;color:#aaa;text-align:center;">⏳ Chargement...</div>
+                </div>
+                <div class="refresh-info">🔄 Mise à jour automatique toutes les 8 secondes</div>
             </div>
         </div>
 
-        <div class="card">
+        <!-- Formulaire saisie nom -->
+        <div class="card" id="form-card">
+            <h2><span class="icon">👤</span> Vos Informations</h2>
+            <div id="select-nom-section">
+                <!-- Liste déroulante des apprenants attendus -->
+                <div class="form-group" id="select-apprenant-group" style="display:none;">
+                    <label for="apprenant-select">Sélectionnez votre nom *</label>
+                    <select id="apprenant-select">
+                        <option value="">-- Choisir mon nom --</option>
+                    </select>
+                </div>
+                <!-- Fallback : saisie manuelle -->
+                <div class="form-group" id="saisie-manuelle-group">
+                    <label for="apprenant-nom">Votre Nom *</label>
+                    <input type="text" id="apprenant-nom" placeholder="Ex: MARTIN" required autocomplete="family-name">
+                </div>
+                <div class="form-group" id="saisie-prenom-group">
+                    <label for="apprenant-prenom">Votre Prénom *</label>
+                    <input type="text" id="apprenant-prenom" placeholder="Ex: Marie" required autocomplete="given-name">
+                </div>
+            </div>
+        </div>
+
+        <!-- Zone de signature -->
+        <div class="card" id="signature-card">
             <h2><span class="icon">✍️</span> Votre Signature</h2>
             <p class="info-text">Signez dans le cadre ci-dessous (doigt ou stylet).</p>
-            
             <div class="signature-wrapper">
                 <div class="signature-pad-container">
                     <canvas id="signature-pad"></canvas>
                 </div>
-                <button type="button" class="btn-clear-round" id="clear-signature" title="Effacer">
-                    🗑️
-                </button>
+                <button type="button" class="btn-clear-round" id="clear-signature" title="Effacer">🗑️</button>
             </div>
-
             <button class="btn-primary" id="submit-signature">
                 <span>✅</span> Valider ma Présence
             </button>
         </div>
 
-        <!-- Success Message -->
+        <!-- Message succès -->
         <div class="card hidden success-card" id="success-message">
-            <h2><span class="icon">🎉</span> Présence Enregistrée</h2>
-            <p>Merci ! Votre signature a été enregistrée avec succès.</p>
-            <p class="info-text" style="color: white; margin-top: 20px;">
-                Vous pouvez maintenant fermer cet onglet.
-            </p>
+            <h2><span class="icon">🎉</span> Présence Enregistrée !</h2>
+            <p>Merci <strong id="success-nom"></strong> ! Votre signature a été enregistrée.</p>
+            <p class="info-text" style="color: white; margin-top: 20px;">Vous pouvez fermer cet onglet.</p>
         </div>
 
-        <!-- Error Message -->
+        <!-- Message erreur -->
         <div class="card hidden error-card" id="error-message">
             <h2><span class="icon">❌</span> Erreur</h2>
-            <p id="error-text">Une erreur est survenue lors de l'enregistrement.</p>
-            <button class="btn-secondary" onclick="location.reload()" style="margin-top: 15px; background: white;">
-                Réessayer
-            </button>
+            <p id="error-text">Une erreur est survenue.</p>
+            <button class="btn-secondary" onclick="location.reload()" style="margin-top:15px;background:white;">Réessayer</button>
         </div>
     </div>
 
-    <!-- Bibliothèques -->
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
     <script src="js/apprenant.js"></script>
 </body>
