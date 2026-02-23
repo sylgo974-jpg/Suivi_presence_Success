@@ -1,329 +1,308 @@
 /* =====================================================
    PALETTE SUCCESS FORMATION
-   Fond      : #f1d7bc
-   Traits    : #ce2a45
-   Texte     : #000000
-   Accent 1  : #fc772c (orange)
-   Accent 2  : #5c646b (gris ardoise)
+   Fond     : #f1d7bc
+   Traits   : #ce2a45
+   Texte    : #000000
+   Accent 1 : #fc772c (orange)
+   Accent 2 : #5c646b (gris ardoise)
    ===================================================== */
 
 :root {
-    --sf-bg: #f1d7bc;
-    --sf-border: #ce2a45;
-    --sf-text: #000000;
-    --sf-orange: #fc772c;
-    --sf-slate: #5c646b;
-    --sf-white: #ffffff;
-    --sf-success: #2d9e6b;
-    --sf-error: #ce2a45;
-    --header-height: 180px;
+  --sf-bg: #f1d7bc;
+  --sf-border: #ce2a45;
+  --sf-text: #000000;
+  --sf-orange: #fc772c;
+  --sf-slate: #5c646b;
+  --sf-white: #ffffff;
+  --sf-success: #2d9e6b;
+  --sf-error: #ce2a45;
+  --header-height: 180px;
 }
 
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent; /* Optimisation mobile tactile */
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-    background: linear-gradient(135deg, #f1d7bc 0%, #e8c5a0 100%);
-    background-attachment: fixed;
-    min-height: 100vh;
-    padding: 15px;
-    color: var(--sf-text);
-    line-height: 1.5;
-    font-size: 16px; /* Taille de police de base pour mobile */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: linear-gradient(135deg, #f1d7bc 0%, #e8c5a0 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  padding: 15px;
+  color: var(--sf-text);
+  line-height: 1.5;
+  font-size: 16px;
+  overscroll-behavior-y: none;
 }
 
 .container {
-    max-width: 600px;
-    margin: 0 auto;
-    padding-bottom: 30px;
+  max-width: 600px;
+  margin: 0 auto;
+  padding-bottom: 30px;
 }
 
-/* ====== Header avec logo ====== */
 header {
-    text-align: center;
-    margin-bottom: 25px;
-    padding-top: 10px;
+  text-align: center;
+  margin-bottom: 25px;
+  padding-top: 10px;
 }
 
 .header-logo {
-    display: block;
-    max-width: 180px;
-    height: auto;
-    margin: 0 auto 12px auto;
-    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
+  display: block;
+  max-width: 180px;
+  height: auto;
+  margin: 0 auto 12px auto;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
 }
 
 header h1 {
-    font-size: 1.6rem;
-    margin-bottom: 6px;
-    color: var(--sf-border);
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+  font-size: 1.6rem;
+  margin-bottom: 6px;
+  color: var(--sf-border);
 }
 
 .subtitle {
-    font-size: 0.95rem;
-    color: var(--sf-slate);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+  font-size: 0.95rem;
+  color: var(--sf-slate);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-/* ====== Cards ====== */
 .card {
-    background: var(--sf-white);
-    border-radius: 16px;
-    padding: 22px;
-    margin-bottom: 20px;
-    box-shadow: 0 8px 30px rgba(206,42,69,0.12);
-    border: 2px solid var(--sf-border);
+  background: var(--sf-white);
+  border-radius: 16px;
+  padding: 22px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 30px rgba(206,42,69,0.12);
+  border: 2px solid var(--sf-border);
 }
 
 .card h2 {
-    color: var(--sf-border);
-    margin-bottom: 18px;
-    font-size: 1.25rem;
-    border-bottom: 2px solid var(--sf-bg);
-    padding-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  color: var(--sf-border);
+  margin-bottom: 18px;
+  font-size: 1.25rem;
+  border-bottom: 2px solid var(--sf-bg);
+  padding-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-/* ====== Formulaires ====== */
 .form-group {
-    margin-bottom: 20px;
+  margin-bottom: 20px;
 }
 
 .form-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-    color: var(--sf-slate);
-    font-size: 0.9rem;
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--sf-slate);
+  font-size: 0.9rem;
 }
 
-/* Optimisation des champs pour mobile (éviter le zoom auto sur iOS avec 16px min) */
 .form-group input, 
 .form-group select {
-    width: 100%;
-    padding: 14px 16px;
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    font-size: 16px;
-    color: var(--sf-text);
-    background: #fdfaf7;
-    transition: all 0.2s ease;
-    appearance: none; /* Uniformisation Android/iOS */
-    -webkit-appearance: none;
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 16px;
+  color: var(--sf-text);
+  background: #fdfaf7;
+  transition: all 0.2s ease;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .form-group input:focus, 
 .form-group select:focus {
-    outline: none;
-    border-color: var(--sf-border);
-    box-shadow: 0 0 0 4px rgba(206,42,69,0.15);
-    background: #ffffff;
+  outline: none;
+  border-color: var(--sf-border);
+  box-shadow: 0 0 0 4px rgba(206,42,69,0.15);
+  background: #ffffff;
 }
 
-/* ====== Info box ====== */
 .info-box {
-    background: var(--sf-bg);
-    border-left: 5px solid var(--sf-border);
-    padding: 16px;
-    border-radius: 12px;
-    margin: 20px 0;
+  background: var(--sf-bg);
+  border-left: 5px solid var(--sf-border);
+  padding: 16px;
+  border-radius: 12px;
+  margin: 20px 0;
 }
 
 .info-box p {
-    margin: 8px 0;
-    color: var(--sf-text);
-    font-size: 0.95rem;
+  margin: 8px 0;
+  color: var(--sf-text);
+  font-size: 0.95rem;
 }
 
 .info-text {
-    color: var(--sf-slate);
-    font-size: 0.9rem;
-    margin: 12px 0;
-    text-align: center;
+  color: var(--sf-slate);
+  font-size: 0.9rem;
+  margin: 12px 0;
+  text-align: center;
 }
 
-/* ====== Signature wrapper ====== */
 .signature-wrapper {
-    position: relative;
-    width: 100%;
-    margin: 20px 0;
+  position: relative;
+  width: 100%;
+  margin: 20px 0;
 }
 
 .signature-pad-container {
-    border: 3px solid var(--sf-border);
-    border-radius: 14px;
-    background: #ffffff;
-    overflow: hidden;
-    box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
+  border: 3px solid var(--sf-border);
+  border-radius: 14px;
+  background: #ffffff;
+  overflow: hidden;
+  box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
 }
 
 #signature-pad {
-    display: block;
-    width: 100%;
-    height: 250px;
-    cursor: crosshair;
-    touch-action: none;
+  display: block;
+  width: 100%;
+  height: 250px;
+  cursor: crosshair;
+  touch-action: none;
 }
 
 .btn-clear-round {
-    position: absolute;
-    top: -12px;
-    right: -12px;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 3px solid var(--sf-border);
-    background: var(--sf-white);
-    color: var(--sf-border);
-    font-size: 20px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 10px rgba(206,42,69,0.25);
-    z-index: 10;
-    transition: transform 0.2s active;
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid var(--sf-border);
+  background: var(--sf-white);
+  color: var(--sf-border);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(206,42,69,0.25);
+  z-index: 10;
+  transition: transform 0.2s;
 }
 
 .btn-clear-round:active {
-    transform: scale(0.9);
+  transform: scale(0.9);
 }
 
-/* ====== Boutons principaux ====== */
 .btn-primary, .btn-secondary {
-    width: 100%;
-    padding: 16px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    margin-top: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
+  width: 100%;
+  padding: 16px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  user-select: none;
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--sf-border) 0%, var(--sf-orange) 100%);
-    color: var(--sf-white);
-    box-shadow: 0 6px 20px rgba(206,42,69,0.3);
+  background: linear-gradient(135deg, var(--sf-border) 0%, var(--sf-orange) 100%);
+  color: var(--sf-white);
+  box-shadow: 0 6px 20px rgba(206,42,69,0.3);
 }
 
 .btn-primary:active {
-    transform: scale(0.98);
-    box-shadow: 0 3px 10px rgba(206,42,69,0.2);
+  transform: scale(0.96);
+  box-shadow: 0 3px 10px rgba(206,42,69,0.2);
 }
 
 .btn-primary:disabled {
-    background: #cbd5e0;
-    box-shadow: none;
-    cursor: not-allowed;
+  background: #cbd5e0;
+  box-shadow: none;
+  cursor: not-allowed;
 }
 
 .btn-secondary {
-    background: var(--sf-white);
-    color: var(--sf-border);
-    border: 3px solid var(--sf-border);
+  background: var(--sf-white);
+  color: var(--sf-border);
+  border: 3px solid var(--sf-border);
 }
 
 .btn-secondary:active {
-    background: var(--sf-bg);
+  background: var(--sf-bg);
+  transform: scale(0.96);
 }
 
-/* ====== QR Code ====== */
 #qrcode-container {
-    display: flex;
-    justify-content: center;
-    margin: 20px 0;
-    padding: 15px;
-    background: #ffffff;
-    border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+  padding: 15px;
+  background: #ffffff;
+  border-radius: 12px;
 }
 
 #qrcode-container canvas, #qrcode-container img {
-    max-width: 100%;
-    height: auto !important;
-    border: 2px solid var(--sf-bg);
-    padding: 10px;
+  max-width: 100%;
+  height: auto !important;
+  border: 2px solid var(--sf-bg);
+  padding: 10px;
 }
 
 .qr-info {
-    text-align: center;
-    background: #fdfaf7;
-    padding: 18px;
-    border-radius: 12px;
-    margin: 15px 0;
-    border: 1px dashed var(--sf-border);
+  text-align: center;
+  background: #fdfaf7;
+  padding: 18px;
+  border-radius: 12px;
+  margin: 15px 0;
+  border: 1px dashed var(--sf-border);
 }
 
-/* ====== Liste presences ====== */
 #attendance-list {
-    margin-top: 15px;
+  margin-top: 15px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .attendance-item {
-    background: #fdfaf7;
-    padding: 16px;
-    border-radius: 12px;
-    margin-bottom: 12px;
-    border-left: 6px solid var(--sf-orange);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  background: #fdfaf7;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  border-left: 6px solid var(--sf-orange);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 .attendance-item p {
-    margin: 4px 0;
-    font-size: 0.95rem;
+  margin: 4px 0;
+  font-size: 0.95rem;
 }
 
-/* ====== Responsive / Mobile Specific ====== */
+.hidden {
+  display: none !important;
+}
+
 @media (max-width: 480px) {
-    body {
-        padding: 10px;
-    }
-    
-    header h1 {
-        font-size: 1.4rem;
-    }
-    
-    .card {
-        padding: 18px;
-        border-radius: 14px;
-    }
-    
-    #signature-pad {
-        height: 220px;
-    }
+  body { padding: 10px; }
+  header h1 { font-size: 1.4rem; }
+  .card { padding: 18px; border-radius: 14px; }
+  #signature-pad { height: 220px; }
 }
 
-/* ====== Loader ====== */
 .loading {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 3px solid rgba(255,255,255,.3);
-    border-radius: 50%;
-    border-top-color: #fff;
-    animation: spin 0.8s linear infinite;
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255,255,255,.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Fix iOS smooth scrolling */
-#attendance-list {
-    -webkit-overflow-scrolling: touch;
+  to { transform: rotate(360deg); }
 }
