@@ -4,9 +4,68 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Interface Formateur - Success Formation</title>
-    <!-- Favicon pour mobile -->
     <link rel="apple-touch-icon" href="img/Logo success Formation rec.PNG">
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Styles supplémentaires pour les listes */
+        .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+            appearance: auto;
+            cursor: pointer;
+        }
+        .form-group select:focus {
+            border-color: #ce2a45;
+            outline: none;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #ce2a45;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .apprenants-preview {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-top: 8px;
+            font-size: 13px;
+            color: #555;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        .apprenants-preview .apprenant-item {
+            padding: 3px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .apprenants-preview .apprenant-item:last-child {
+            border-bottom: none;
+        }
+        .badge-count {
+            display: inline-block;
+            background: #ce2a45;
+            color: white;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 6px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -18,28 +77,33 @@
 
         <div class="card">
             <h2><span class="icon">📝</span> Informations Session</h2>
+
+            <!-- Sélection du Formateur -->
             <div class="form-group">
-                <label for="formateur-nom">Nom du Formateur *</label>
-                <input type="text" id="formateur-nom" placeholder="Ex: DUPONT" required autocomplete="family-name">
-            </div>
-            
-            <div class="form-group">
-                <label for="formateur-prenom">Prénom du Formateur *</label>
-                <input type="text" id="formateur-prenom" placeholder="Ex: Jean" required autocomplete="given-name">
+                <label for="formateur-select">👨‍🏫 Formateur *</label>
+                <select id="formateur-select" required>
+                    <option value="">⏳ Chargement des formateurs...</option>
+                </select>
             </div>
 
+            <!-- Champs cachés pour compatibilité avec formateur.js -->
+            <input type="hidden" id="formateur-nom">
+            <input type="hidden" id="formateur-prenom">
+
+            <!-- Sélection de la Formation -->
             <div class="form-group">
-                <label for="formation">Formation *</label>
+                <label for="formation">🏫 Formation *</label>
                 <select id="formation" required>
-                    <option value="">-- Sélectionner --</option>
-                    <option value="TP TLE">TP TLE</option>
-                    <option value="TP TSMEL">TP TSMEL</option>
-                    <option value="TP Conseiller de vente">TP Conseiller de vente</option>
-                    <option value="TP Graphiste">TP Graphiste</option>
-                    <option value="TP AMUM">TP AMUM</option>
-                    <option value="TP MUM">TP MUM</option>
-                    <option value="TP Negociateur Technico Commercial">TP Negociateur Technico Commercial</option>
+                    <option value="">⏳ Chargement des formations...</option>
                 </select>
+            </div>
+
+            <!-- Liste des apprenants attendus -->
+            <div class="form-group" id="apprenants-section" style="display:none;">
+                <label>👥 Apprenants attendus <span id="apprenants-count" class="badge-count">0</span></label>
+                <div class="apprenants-preview" id="apprenants-list">
+                    <em>Sélectionnez une formation pour voir les apprenants</em>
+                </div>
             </div>
 
             <div class="info-box">
@@ -56,13 +120,9 @@
             <h2><span class="icon">📱</span> QR Code de Pointage</h2>
             <p class="info-text">Faites scanner ce code aux apprenants pour qu'ils puissent émarger.</p>
             
-            <div id="qrcode-container">
-                <!-- Le QR Code sera généré ici -->
-            </div>
+            <div id="qrcode-container"></div>
 
-            <div class="qr-info" id="qr-validity">
-                <!-- Infos session ici -->
-            </div>
+            <div class="qr-info" id="qr-validity"></div>
 
             <button class="btn-secondary" id="download-qr">
                 <span>💾</span> Télécharger l'image
@@ -80,6 +140,126 @@
 
     <!-- Bibliothèques -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="js/resources-loader.js"></script>
     <script src="js/formateur.js"></script>
+
+    <!-- Initialisation des listes déroulantes -->
+    <script>
+    const API_RESOURCES = 'https://suivi-presence-success.vercel.app/api';
+    let apprenantsData = [];
+
+    // 1. Charger les formations au démarrage
+    async function initFormations() {
+        try {
+            const res = await fetch(`${API_RESOURCES}/resources/formations`);
+            const formations = await res.json();
+
+            const selectFormation = document.getElementById('formation');
+            selectFormation.innerHTML = '<option value="">-- Sélectionner --</option>';
+
+            formations.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f;
+                opt.textContent = f;
+                selectFormation.appendChild(opt);
+            });
+        } catch(e) {
+            console.warn('⚠️  Impossible de charger les formations depuis l\'API, utilisation liste de secours');
+            const selectFormation = document.getElementById('formation');
+            selectFormation.innerHTML = `
+                <option value="">-- Sélectionner --</option>
+                <option value="TLE">TLE</option>
+                <option value="TSMEL">TSMEL</option>
+                <option value="MUM">MUM</option>
+                <option value="AMUM">AMUM</option>
+                <option value="ASCOM">ASCOM</option>
+                <option value="CV">CV</option>
+                <option value="GRAPHISTE">GRAPHISTE</option>
+                <option value="NTC">NTC</option>
+                <option value="REM">REM</option>
+                <option value="FPA">FPA</option>
+            `;
+        }
+    }
+
+    // 2. Charger les formateurs au démarrage
+    async function initFormateurs() {
+        try {
+            const res = await fetch(`${API_RESOURCES}/resources/formateurs`);
+            const formateurs = await res.json();
+
+            const selectFormateur = document.getElementById('formateur-select');
+            selectFormateur.innerHTML = '<option value="">-- Sélectionner votre nom --</option>';
+
+            formateurs.forEach(nom => {
+                const opt = document.createElement('option');
+                opt.value = nom;
+                opt.textContent = nom;
+                selectFormateur.appendChild(opt);
+            });
+
+        } catch(e) {
+            console.warn('⚠️  Impossible de charger les formateurs');
+            const selectFormateur = document.getElementById('formateur-select');
+            selectFormateur.innerHTML = '<option value="">-- Saisir manuellement --</option>';
+        }
+    }
+
+    // 3. Quand on choisit un formateur, remplir nom/prénom cachés
+    document.getElementById('formateur-select').addEventListener('change', function() {
+        const nomComplet = this.value; // Ex: "GORECKI Sylvain"
+        if (!nomComplet) {
+            document.getElementById('formateur-nom').value = '';
+            document.getElementById('formateur-prenom').value = '';
+            return;
+        }
+        const parts = nomComplet.split(' ');
+        // Conventionnellement: premier mot = NOM, reste = prénom
+        document.getElementById('formateur-nom').value = parts[0] || '';
+        document.getElementById('formateur-prenom').value = parts.slice(1).join(' ') || parts[0];
+    });
+
+    // 4. Quand on choisit une formation, charger les apprenants
+    document.getElementById('formation').addEventListener('change', async function() {
+        const formation = this.value;
+        const section = document.getElementById('apprenants-section');
+        const listEl = document.getElementById('apprenants-list');
+        const countEl = document.getElementById('apprenants-count');
+
+        if (!formation) {
+            section.style.display = 'none';
+            return;
+        }
+
+        listEl.innerHTML = '<span class="loading-spinner"></span> Chargement des apprenants...';
+        section.style.display = 'block';
+
+        try {
+            const res = await fetch(`${API_RESOURCES}/resources/apprenants?formation=${encodeURIComponent(formation)}`);
+            apprenantsData = await res.json();
+
+            countEl.textContent = apprenantsData.length;
+
+            if (apprenantsData.length === 0) {
+                listEl.innerHTML = '<em>Aucun apprenant trouvé pour cette formation</em>';
+                return;
+            }
+
+            listEl.innerHTML = apprenantsData
+                .map(nom => `<div class="apprenant-item">👤 ${nom}</div>`)
+                .join('');
+
+        } catch(e) {
+            listEl.innerHTML = '<em>⚠️  Impossible de charger les apprenants</em>';
+            console.error(e);
+        }
+    });
+
+    // 5. Initialisation au chargement de la page
+    window.addEventListener('DOMContentLoaded', () => {
+        initFormations();
+        initFormateurs();
+    });
+    </script>
 </body>
 </html>
