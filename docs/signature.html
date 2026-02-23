@@ -2,70 +2,80 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Signature Apprenant - Success Formation</title>
+    <!-- Favicon pour mobile -->
+    <link rel="apple-touch-icon" href="img/Logo success Formation rec.PNG">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div class="container">
         <header>
-                        <img src="img/Logo success Formation rec.PNG" alt="Success Formation" class="header-logo">
-            <h1>Signature de Presence</h1>
+            <img src="img/Logo success Formation rec.PNG" alt="Success Formation" class="header-logo">
+            <h1>Signature de Présence</h1>
             <p class="subtitle">Pointage conforme Qualiopi</p>
         </header>
 
         <div class="card">
             <div class="info-box session-info">
-                <p><strong>Formateur :</strong> <span id="session-formateur"></span></p>
-                <p><strong>Formation :</strong> <span id="session-formation"></span></p>
-                <p><strong>Date :</strong> <span id="session-date"></span></p>
-                <p><strong>Creneau :</strong> <span id="session-creneau"></span></p>
+                <p><strong>👨‍🏫 Formateur :</strong> <span id="session-formateur">...</span></p>
+                <p><strong>📚 Formation :</strong> <span id="session-formation">...</span></p>
+                <p><strong>📅 Date :</strong> <span id="session-date">...</span></p>
+                <p><strong>🕒 Créneau :</strong> <span id="session-creneau">...</span></p>
             </div>
         </div>
 
         <div class="card">
-            <h2>Vos Informations</h2>
-
+            <h2><span class="icon">👤</span> Vos Informations</h2>
             <div class="form-group">
                 <label for="apprenant-nom">Votre Nom *</label>
-                <input type="text" id="apprenant-nom" placeholder="Ex: MARTIN" required>
+                <input type="text" id="apprenant-nom" placeholder="Ex: MARTIN" required autocomplete="family-name">
             </div>
-
             <div class="form-group">
-                <label for="apprenant-prenom">Votre Prenom *</label>
-                <input type="text" id="apprenant-prenom" placeholder="Ex: Marie" required>
+                <label for="apprenant-prenom">Votre Prénom *</label>
+                <input type="text" id="apprenant-prenom" placeholder="Ex: Marie" required autocomplete="given-name">
             </div>
         </div>
 
         <div class="card">
-            <h2>Votre Signature</h2>
-            <p class="info-text">Signez dans le cadre ci-dessous avec votre doigt ou stylet</p>
-
+            <h2><span class="icon">✍️</span> Votre Signature</h2>
+            <p class="info-text">Signez dans le cadre ci-dessous (doigt ou stylet).</p>
+            
             <div class="signature-wrapper">
-                <button class="btn-clear-round" id="clear-signature" title="Effacer la signature">&#128465;</button>
                 <div class="signature-pad-container">
                     <canvas id="signature-pad"></canvas>
                 </div>
+                <button type="button" class="btn-clear-round" id="clear-signature" title="Effacer">
+                    🗑️
+                </button>
             </div>
 
-            <div class="signature-actions">
-                <button class="btn-primary" id="submit-signature">Valider ma Presence</button>
-            </div>
+            <button class="btn-primary" id="submit-signature">
+                <span>✅</span> Valider ma Présence
+            </button>
         </div>
 
-        <div class="card success-card hidden" id="success-message">
-            <h2>Presence Enregistree</h2>
-            <p>Merci ! Votre signature a ete enregistree avec succes.</p>
-            <p>Vous pouvez fermer cette page.</p>
+        <!-- Success Message -->
+        <div class="card hidden success-card" id="success-message">
+            <h2><span class="icon">🎉</span> Présence Enregistrée</h2>
+            <p>Merci ! Votre signature a été enregistrée avec succès.</p>
+            <p class="info-text" style="color: white; margin-top: 20px;">
+                Vous pouvez maintenant fermer cet onglet.
+            </p>
         </div>
 
-        <div class="card error-card hidden" id="error-message">
-            <h2>Erreur</h2>
-            <p id="error-text"></p>
+        <!-- Error Message -->
+        <div class="card hidden error-card" id="error-message">
+            <h2><span class="icon">❌</span> Erreur</h2>
+            <p id="error-text">Une erreur est survenue lors de l'enregistrement.</p>
+            <button class="btn-secondary" onclick="location.reload()" style="margin-top: 15px; background: white;">
+                Réessayer
+            </button>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
+    <!-- Bibliothèques -->
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
     <script src="js/apprenant.js"></script>
 </body>
 </html>
