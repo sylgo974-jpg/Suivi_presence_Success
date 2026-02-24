@@ -18,70 +18,85 @@
             cursor: pointer;
         }
         .form-group select:focus { border-color: #ce2a45; outline: none; }
+        
         .loading-spinner {
-            display: inline-block; width: 14px; height: 14px;
-            border: 2px solid #f3f3f3; border-top: 2px solid #ce2a45;
-            border-radius: 50%; animation: spin 0.8s linear infinite;
-            margin-right: 6px; vertical-align: middle;
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #ce2a45;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 6px;
+            vertical-align: middle;
         }
         @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+
         .apprenants-preview {
-            background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px;
-            padding: 10px 14px; margin-top: 8px; font-size: 13px; color: #555;
-            max-height: 150px; overflow-y: auto;
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-top: 8px;
+            font-size: 13px;
+            color: #555;
+            max-height: 150px;
+            overflow-y: auto;
         }
         .apprenant-item { padding: 4px 0; border-bottom: 1px solid #eee; }
         .apprenant-item:last-child { border-bottom: none; }
+
         .badge-count {
-            display: inline-block; background: #ce2a45; color: white;
-            border-radius: 12px; padding: 2px 8px; font-size: 12px; font-weight: bold; margin-left: 6px;
+            display: inline-block;
+            background: #ce2a45;
+            color: white;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 6px;
         }
+
         optgroup { font-weight: bold; color: #333; }
+        
         .info-jour {
-            background: #eaf4ff; border-left: 4px solid #ce2a45;
-            padding: 8px 12px; border-radius: 6px; font-size: 13px;
-            margin-bottom: 12px; color: #333;
+            background: #eaf4ff;
+            border-left: 4px solid #ce2a45;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 12px;
+            color: #333;
         }
 
         /* === STYLES SUIVI PRÉSENCES === */
-        .attendance-header {
-            padding: 10px 0 14px;
-        }
-        .attendance-stats {
-            display: flex; gap: 12px; flex-wrap: wrap;
-            margin-bottom: 8px; font-size: 14px;
-        }
+        .attendance-header { padding: 10px 0 14px; }
+        .attendance-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; font-size: 14px; }
         .stat-present { color: #27ae60; font-weight: 600; }
-        .stat-absent  { color: #e74c3c; font-weight: 600; }
-        .stat-total   { color: #555; }
-        .progress-bar-container {
-            background: #f0f0f0; border-radius: 20px;
-            height: 10px; overflow: hidden; margin-bottom: 4px;
-        }
-        .progress-bar {
-            height: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71);
-            border-radius: 20px; transition: width 0.6s ease;
-        }
+        .stat-absent { color: #e74c3c; font-weight: 600; }
+        .stat-total { color: #555; }
+        
+        .progress-bar-container { background: #f0f0f0; border-radius: 20px; height: 10px; overflow: hidden; margin-bottom: 4px; }
+        .progress-bar { height: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71); border-radius: 20px; transition: width 0.6s ease; }
         .progress-label { font-size: 12px; color: #888; text-align: right; }
+
         .attendance-group { margin-top: 14px; }
-        .group-title {
-            font-weight: 700; font-size: 13px; padding: 6px 10px;
-            border-radius: 6px; margin-bottom: 6px;
-        }
+        .group-title { font-weight: 700; font-size: 13px; padding: 6px 10px; border-radius: 6px; margin-bottom: 6px; }
         .present-title { background: #eafaf1; color: #27ae60; border-left: 4px solid #27ae60; }
-        .absent-title  { background: #fdf3f3; color: #e74c3c; border-left: 4px solid #e74c3c; }
+        .absent-title { background: #fdf3f3; color: #e74c3c; border-left: 4px solid #e74c3c; }
+
         .attendance-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 8px 10px; border-radius: 6px; margin-bottom: 4px;
-            font-size: 14px; transition: background 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            border-radius: 6px;
+            margin-bottom: 4px;
+            font-size: 14px;
+            transition: background 0.3s;
         }
-        .attendance-item.present {
-            background: #f0faf4; border-left: 3px solid #27ae60;
-        }
-        .attendance-item.absent {
-            background: #fdf8f8; border-left: 3px solid #e0e0e0;
-            color: #999;
-        }
+        .attendance-item.present { background: #f0faf4; border-left: 3px solid #27ae60; }
+        .attendance-item.absent { background: #fdf8f8; border-left: 3px solid #e0e0e0; color: #999; }
         .att-nom { font-weight: 500; }
         .att-heure { font-size: 12px; color: #27ae60; font-weight: 600; white-space: nowrap; }
         .att-statut { font-size: 12px; color: #bbb; font-style: italic; }
@@ -90,216 +105,230 @@
 <body>
     <div class="container">
         <header>
-            <img src="img/Logo success Formation rec.PNG" alt="Success Formation" class="header-logo">
+            <div class="logo">
+                <img src="img/Logo%20success%20Formation%20rec.PNG" alt="Success Formation">
+                <span>Success Formation</span>
+            </div>
             <h1>Interface d'émargement</h1>
             <p class="subtitle">Espace Formateur</p>
         </header>
 
-        <div class="card">
-            <h2><span class="icon">📝</span> Informations Session</h2>
-            <div class="info-jour" id="info-jour">📅 Chargement du jour...</div>
+        <main>
+            <div class="card">
+                <h2><span class="icon">📝</span> Informations Session</h2>
+                
+                <div id="info-jour" class="info-jour">📅 Chargement du jour...</div>
 
-            <div class="form-group">
-                <label for="session-select">🏫 Session du jour *</label>
-                <select id="session-select" required>
-                    <option value="">⏳ Chargement des sessions...</option>
-                </select>
+                <div class="form-group">
+                    <label for="session-select">🏫 Session du jour *</label>
+                    <select id="session-select" required>
+                        <option value="">⏳ Chargement des sessions...</option>
+                    </select>
+                </div>
+
+                <div id="formateur-section" style="display:none;">
+                    <div class="form-group">
+                        <label for="formateur-select">👨‍🏫 Formateur *</label>
+                        <select id="formateur-select" required>
+                            <option value="">-- Sélectionner votre nom --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Hidden inputs pour stocker les infos extraites -->
+                <input type="hidden" id="formateur-nom">
+                <input type="hidden" id="formateur-prenom">
+                <input type="hidden" id="formation">
+
+                <div id="apprenants-section" style="display:none;">
+                    <h3>👥 Apprenants attendus <span id="apprenants-count" class="badge-count">0</span></h3>
+                    <div id="apprenants-list" class="apprenants-preview">
+                        <em>Sélectionnez une session pour voir les apprenants</em>
+                    </div>
+                </div>
+
+                <div class="session-info-details">
+                    <p><strong>📅 Date :</strong> <span id="current-date"></span></p>
+                    <p><strong>🕒 Créneau :</strong> <span id="current-slot">Chargement...</span></p>
+                </div>
+
+                <button id="generate-qr" class="btn btn-primary" disabled>
+                    <span class="icon">🔗</span> Générer QR Code
+                </button>
             </div>
 
-            <div class="form-group" id="formateur-section" style="display:none;">
-                <label for="formateur-select">👨‍🏫 Formateur *</label>
-                <select id="formateur-select" required>
-                    <option value="">-- Sélectionner votre nom --</option>
-                </select>
+            <div class="card hidden" id="qr-section">
+                <h2><span class="icon">📱</span> QR Code de Pointage</h2>
+                <p>Faites scanner ce code aux apprenants pour qu'ils puissent émarger.</p>
+                
+                <div id="qrcode-container" class="qrcode"></div>
+                
+                <div id="qr-validity" class="qr-validity"></div>
+
+                <button id="download-qr" class="btn btn-secondary">
+                    <span class="icon">💾</span> Télécharger l'image
+                </button>
             </div>
 
-            <input type="hidden" id="formateur-nom">
-            <input type="hidden" id="formateur-prenom">
-            <input type="hidden" id="formation">
-
-            <div class="form-group" id="apprenants-section" style="display:none;">
-                <label>👥 Apprenants attendus <span id="apprenants-count" class="badge-count">0</span></label>
-                <div class="apprenants-preview" id="apprenants-list">
-                    <em>Sélectionnez une session pour voir les apprenants</em>
+            <div class="card hidden" id="attendance-section">
+                <h2><span class="icon">👥</span> Suivi des présences <span id="refresh-badge" style="font-size:12px;color:#888;font-weight:normal;">🔄 auto 10s</span></h2>
+                <p class="info-text">Mis à jour automatiquement toutes les 10 secondes.</p>
+                <div id="attendance-list">
+                    <div class="info-text">⏳ En attente de signatures...</div>
                 </div>
             </div>
-
-            <div class="info-box">
-                <p><strong>📅 Date :</strong> <span id="current-date"></span></p>
-                <p><strong>🕒 Créneau :</strong> <span id="current-slot">Chargement...</span></p>
-            </div>
-
-            <button class="btn-primary" id="generate-qr" disabled>
-                <span>🔗</span> Générer QR Code
-            </button>
-        </div>
-
-        <div class="card hidden" id="qr-section">
-            <h2><span class="icon">📱</span> QR Code de Pointage</h2>
-            <p class="info-text">Faites scanner ce code aux apprenants pour qu'ils puissent émarger.</p>
-            <div id="qrcode-container"></div>
-            <div class="qr-info" id="qr-validity"></div>
-            <button class="btn-secondary" id="download-qr">
-                <span>💾</span> Télécharger l'image
-            </button>
-        </div>
-
-        <div class="card hidden" id="attendance-section">
-            <h2><span class="icon">👥</span> Suivi des présences <span id="refresh-badge" style="font-size:12px;color:#888;font-weight:normal;">🔄 auto 10s</span></h2>
-            <p class="info-text">Mis à jour automatiquement toutes les 10 secondes.</p>
-            <div id="attendance-list">
-                <div class="info-text">⏳ En attente de signatures...</div>
-            </div>
-        </div>
+        </main>
     </div>
 
+    <!-- Bibliothèques -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="js/resources-loader.js"></script>
+    <script src="js/formateur.js"></script>
 
     <script>
-    const API_RESOURCES = 'https://suivi-presence-success.vercel.app/api';
-    const JOURS = { 0:null, 1:'LUNDI', 2:'MARDI', 3:'MERCREDI', 4:'JEUDI', 5:'VENDREDI', 6:null };
-    let apprenantsActuels = [];
+        const API_RESOURCES = 'https://suivi-presence-success.vercel.app/api';
+        const JOURS = { 0:null, 1:'LUNDI', 2:'MARDI', 3:'MERCREDI', 4:'JEUDI', 5:'VENDREDI', 6:null };
+        let apprenantsActuels = [];
 
-    function getJourActuel() {
-        return JOURS[new Date().getDay()] || null;
-    }
-
-    async function initSessions() {
-        const jourActuel = getJourActuel();
-        const infoJourEl = document.getElementById('info-jour');
-        const selectSession = document.getElementById('session-select');
-
-        infoJourEl.innerHTML = jourActuel
-            ? `📅 Aujourd'hui : <strong>${jourActuel}</strong> — Sessions du jour + AFC disponibles`
-            : `🚫 Week-end — Seules les <strong>sessions AFC</strong> sont disponibles`;
-
-        try {
-            const res = await fetch(`${API_RESOURCES}/resources/all`);
-            const ressources = await res.json();
-
-            const sessionsMap = new Map();
-            ressources.forEach(r => {
-                const key = `${r.jour}||${r.formation}`;
-                if (!sessionsMap.has(key)) sessionsMap.set(key, { jour: r.jour, formation: r.formation });
-            });
-
-            const sessionsAujourdHui = [];
-            const sessionsAFC = [];
-
-            sessionsMap.forEach(s => {
-                if (s.jour === 'AFC') sessionsAFC.push(s);
-                else if (jourActuel && s.jour === jourActuel) sessionsAujourdHui.push(s);
-            });
-
-            selectSession.innerHTML = '<option value="">-- Sélectionner une session --</option>';
-
-            if (sessionsAujourdHui.length > 0) {
-                const g1 = document.createElement('optgroup');
-                g1.label = `📅 Sessions ${jourActuel}`;
-                sessionsAujourdHui.sort((a,b) => a.formation.localeCompare(b.formation)).forEach(s => {
-                    const opt = document.createElement('option');
-                    opt.value = JSON.stringify({ jour: s.jour, formation: s.formation });
-                    opt.textContent = `${s.jour} — ${s.formation}`;
-                    g1.appendChild(opt);
-                });
-                selectSession.appendChild(g1);
-            }
-
-            if (sessionsAFC.length > 0) {
-                const g2 = document.createElement('optgroup');
-                g2.label = '🔄 Sessions AFC (toujours disponibles)';
-                sessionsAFC.sort((a,b) => a.formation.localeCompare(b.formation)).forEach(s => {
-                    const opt = document.createElement('option');
-                    opt.value = JSON.stringify({ jour: s.jour, formation: s.formation });
-                    opt.textContent = `AFC — ${s.formation}`;
-                    g2.appendChild(opt);
-                });
-                selectSession.appendChild(g2);
-            }
-
-            if (!sessionsAujourdHui.length && !sessionsAFC.length)
-                selectSession.innerHTML = '<option value="">Aucune session disponible</option>';
-
-        } catch(e) {
-            console.error('❌ Erreur sessions:', e);
-            selectSession.innerHTML = '<option value="">Erreur de chargement</option>';
+        function getJourActuel() {
+            return JOURS[new Date().getDay()] || null;
         }
-    }
 
-    document.getElementById('session-select').addEventListener('change', async function() {
-        const val = this.value;
-        const formateurSection = document.getElementById('formateur-section');
-        const apprenantsSection = document.getElementById('apprenants-section');
-        const listEl = document.getElementById('apprenants-list');
-        const countEl = document.getElementById('apprenants-count');
-        const btnGenerate = document.getElementById('generate-qr');
+        async function initSessions() {
+            const jourActuel = getJourActuel();
+            const infoJourEl = document.getElementById('info-jour');
+            const selectSession = document.getElementById('session-select');
 
-        document.getElementById('formateur-nom').value = '';
-        document.getElementById('formateur-prenom').value = '';
-        document.getElementById('formation').value = '';
-        formateurSection.style.display = 'none';
-        apprenantsSection.style.display = 'none';
-        btnGenerate.disabled = true;
-        apprenantsActuels = [];
-        if (typeof setListeApprenants === 'function') setListeApprenants([]);
+            infoJourEl.innerHTML = jourActuel 
+                ? `📅 Aujourd'hui : <strong>${jourActuel}</strong> — Sessions du jour + AFC disponibles`
+                : `🚫 Week-end — Seules les <strong>sessions AFC</strong> sont disponibles`;
 
-        if (!val) return;
+            try {
+                const res = await fetch(`${API_RESOURCES}/resources/all`);
+                const ressources = await res.json();
 
-        const { jour, formation } = JSON.parse(val);
-        document.getElementById('formation').value = formation;
+                const sessionsMap = new Map();
+                ressources.forEach(r => {
+                    const key = `${r.jour}||${r.formation}`;
+                    if (!sessionsMap.has(key)) sessionsMap.set(key, { jour: r.jour, formation: r.formation });
+                });
 
-        // Charger formateurs
-        try {
-            const resF = await fetch(`${API_RESOURCES}/resources/formateurs?jour=${encodeURIComponent(jour)}&formation=${encodeURIComponent(formation)}`);
-            const formateurs = await resF.json();
-            const sel = document.getElementById('formateur-select');
-            sel.innerHTML = '<option value="">-- Sélectionner votre nom --</option>';
-            formateurs.forEach(nom => {
-                const opt = document.createElement('option');
-                opt.value = nom; opt.textContent = nom;
-                sel.appendChild(opt);
-            });
-            formateurSection.style.display = 'block';
-        } catch(e) { console.error('❌ Erreur formateurs:', e); }
+                const sessionsAujourdHui = [];
+                const sessionsAFC = [];
 
-        // Charger apprenants
-        try {
-            const resA = await fetch(`${API_RESOURCES}/resources/apprenants?jour=${encodeURIComponent(jour)}&formation=${encodeURIComponent(formation)}`);
-            const apprenants = await resA.json();
+                sessionsMap.forEach(s => {
+                    if (s.jour === 'AFC') sessionsAFC.push(s);
+                    else if (jourActuel && s.jour === jourActuel) sessionsAujourdHui.push(s);
+                });
 
-            apprenantsActuels = apprenants;
-            // Transmettre la liste à formateur.js
-            if (typeof setListeApprenants === 'function') setListeApprenants(apprenants);
+                selectSession.innerHTML = '<option value="">-- Sélectionner une session --</option>';
 
-            countEl.textContent = apprenants.length;
-            listEl.innerHTML = apprenants.length > 0
-                ? apprenants.map(nom => `<div class="apprenant-item">👤 ${nom}</div>`).join('')
-                : '<em>Aucun apprenant trouvé</em>';
-            apprenantsSection.style.display = 'block';
-        } catch(e) {
-            listEl.innerHTML = '<em>⚠️ Impossible de charger les apprenants</em>';
+                if (sessionsAujourdHui.length > 0) {
+                    const g1 = document.createElement('optgroup');
+                    g1.label = `📅 Sessions ${jourActuel}`;
+                    sessionsAujourdHui.sort((a,b) => a.formation.localeCompare(b.formation)).forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = JSON.stringify({ jour: s.jour, formation: s.formation });
+                        opt.textContent = `${s.jour} — ${s.formation}`;
+                        g1.appendChild(opt);
+                    });
+                    selectSession.appendChild(g1);
+                }
+
+                if (sessionsAFC.length > 0) {
+                    const g2 = document.createElement('optgroup');
+                    g2.label = '🔄 Sessions AFC (toujours disponibles)';
+                    sessionsAFC.sort((a,b) => a.formation.localeCompare(b.formation)).forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = JSON.stringify({ jour: s.jour, formation: s.formation });
+                        opt.textContent = `AFC — ${s.formation}`;
+                        g2.appendChild(opt);
+                    });
+                    selectSession.appendChild(g2);
+                }
+
+                if (!sessionsAujourdHui.length && !sessionsAFC.length) selectSession.innerHTML = '<option value="">Aucune session disponible</option>';
+
+            } catch(e) {
+                console.error('❌ Erreur sessions:', e);
+                selectSession.innerHTML = '<option value="">Erreur de chargement</option>';
+            }
         }
-    });
 
-    document.getElementById('formateur-select').addEventListener('change', function() {
-        const nomComplet = this.value;
-        const btnGenerate = document.getElementById('generate-qr');
-        if (!nomComplet) {
+        document.getElementById('session-select').addEventListener('change', async function() {
+            const val = this.value;
+            const formateurSection = document.getElementById('formateur-section');
+            const apprenantsSection = document.getElementById('apprenants-section');
+            const listEl = document.getElementById('apprenants-list');
+            const countEl = document.getElementById('apprenants-count');
+            const btnGenerate = document.getElementById('generate-qr');
+
             document.getElementById('formateur-nom').value = '';
             document.getElementById('formateur-prenom').value = '';
+            document.getElementById('formation').value = '';
+            formateurSection.style.display = 'none';
+            apprenantsSection.style.display = 'none';
             btnGenerate.disabled = true;
-            return;
-        }
-        const parts = nomComplet.split(' ');
-        document.getElementById('formateur-nom').value = parts[0] || '';
-        document.getElementById('formateur-prenom').value = parts.slice(1).join(' ') || parts[0];
-        btnGenerate.disabled = false;
-    });
+            apprenantsActuels = [];
 
-    window.addEventListener('DOMContentLoaded', initSessions);
+            if (typeof setListeApprenants === 'function') setListeApprenants([]);
+            if (typeof setJourActuel === 'function') setJourActuel(null); // <-- Reset jour
+
+            if (!val) return;
+
+            const { jour, formation } = JSON.parse(val);
+            document.getElementById('formation').value = formation;
+            if (typeof setJourActuel === 'function') setJourActuel(jour); // <-- Correction : Transmettre le jour correct
+
+            // Charger formateurs
+            try {
+                const resF = await fetch(`${API_RESOURCES}/resources/formateurs?jour=${encodeURIComponent(jour)}&formation=${encodeURIComponent(formation)}`);
+                const formateurs = await resF.json();
+                const sel = document.getElementById('formateur-select');
+                sel.innerHTML = '<option value="">-- Sélectionner votre nom --</option>';
+                formateurs.forEach(nom => {
+                    const opt = document.createElement('option');
+                    opt.value = nom;
+                    opt.textContent = nom;
+                    sel.appendChild(opt);
+                });
+                formateurSection.style.display = 'block';
+            } catch(e) { console.error('❌ Erreur formateurs:', e); }
+
+            // Charger apprenants
+            try {
+                const resA = await fetch(`${API_RESOURCES}/resources/apprenants?jour=${encodeURIComponent(jour)}&formation=${encodeURIComponent(formation)}`);
+                const apprenants = await resA.json();
+                apprenantsActuels = apprenants;
+                
+                if (typeof setListeApprenants === 'function') setListeApprenants(apprenants);
+                
+                countEl.textContent = apprenants.length;
+                listEl.innerHTML = apprenants.length > 0 
+                    ? apprenants.map(nom => `<div class="apprenant-item">👤 ${nom}</div>`).join('')
+                    : '<em>Aucun apprenant trouvé</em>';
+                apprenantsSection.style.display = 'block';
+            } catch(e) {
+                listEl.innerHTML = '<em>⚠️ Impossible de charger les apprenants</em>';
+            }
+        });
+
+        document.getElementById('formateur-select').addEventListener('change', function() {
+            const nomComplet = this.value;
+            const btnGenerate = document.getElementById('generate-qr');
+            if (!nomComplet) {
+                document.getElementById('formateur-nom').value = '';
+                document.getElementById('formateur-prenom').value = '';
+                btnGenerate.disabled = true;
+                return;
+            }
+            const parts = nomComplet.split(' ');
+            document.getElementById('formateur-nom').value = parts[0] || '';
+            document.getElementById('formateur-prenom').value = parts.slice(1).join(' ') || parts[0];
+            btnGenerate.disabled = false;
+        });
+
+        window.addEventListener('DOMContentLoaded', initSessions);
     </script>
-
-    <script src="js/formateur.js"></script>
 </body>
 </html>
