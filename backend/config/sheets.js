@@ -1,7 +1,20 @@
 const { google } = require('googleapis');
-const credentials = process.env.GOOGLE_CREDENTIALS 
-    ? JSON.parse(process.env.GOOGLE_CREDENTIALS) 
-    : require('./suivi-pointage-486908-ca78da824d02.json');
+
+// Chargement des credentials Google depuis la variable d'environnement UNIQUEMENT
+// Le fichier JSON local ne doit jamais être commité (voir .gitignore)
+if (!process.env.GOOGLE_CREDENTIALS) {
+    console.error('❌ ERREUR CRITIQUE: Variable GOOGLE_CREDENTIALS manquante!');
+    console.error('➡️  Configurer GOOGLE_CREDENTIALS dans les variables d\'environnement Vercel.');
+    throw new Error('GOOGLE_CREDENTIALS non configurée. Vérifiez les variables d\'environnement Vercel.');
+}
+
+let credentials;
+try {
+    credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+} catch (parseErr) {
+    console.error('❌ ERREUR: GOOGLE_CREDENTIALS n\'est pas un JSON valide:', parseErr.message);
+    throw new Error('GOOGLE_CREDENTIALS invalide (JSON malformé). Vérifiez la variable dans Vercel.');
+}
 
 const SHEET_ID = '1Q4eiooEl7l9umlq-cHdQo3dxVssO_s-h6L58eTSwlDw';
 
@@ -10,7 +23,6 @@ async function getGoogleSheetsClient() {
         credentials: credentials,
         scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
-
     const client = await auth.getClient();
     return google.sheets({ version: 'v4', auth: client });
 }
@@ -34,9 +46,8 @@ async function appendToSheet(data) {
         data.longitude || 'N/A',
         data.userAgent || 'N/A',
         data.timestamp,
-        data.sessionCode || ''   // Colonne O : code session pour filtrage
+        data.sessionCode || '' // Colonne O : code session pour filtrage
     ];
-
     await sheets.spreadsheets.values.append({
         spreadsheetId: SHEET_ID,
         range: 'Signatures!A:O',
@@ -59,7 +70,6 @@ async function getTodayAttendances(date, sessionCode) {
         spreadsheetId: SHEET_ID,
         range: 'Signatures!A:O',
     });
-
     const rows = response.data.values || [];
     
     return rows
@@ -109,7 +119,6 @@ async function saveSessions(sessionData) {
         sessionData.creneauLabel,
         sessionData.createdAt
     ];
-
     await sheets.spreadsheets.values.append({
         spreadsheetId: SHEET_ID,
         range: 'Sessions!A:H',
@@ -131,7 +140,6 @@ async function getSessionByCode(code) {
             spreadsheetId: SHEET_ID,
             range: 'Sessions!A:H',
         });
-
         const rows = response.data.values || [];
         
         const sessionRow = rows.find(row => row[0] === code);
