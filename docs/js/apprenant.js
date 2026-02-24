@@ -1,27 +1,24 @@
 const API_URL = 'https://suivi-presence-success.vercel.app/api';
-
 const sessionFormateur = document.getElementById('session-formateur');
 const sessionFormation = document.getElementById('session-formation');
-const sessionDate      = document.getElementById('session-date');
-const sessionCreneau   = document.getElementById('session-creneau');
-const clearBtn         = document.getElementById('clear-signature');
-const submitBtn        = document.getElementById('submit-signature');
-const successMessage   = document.getElementById('success-message');
-const errorMessage     = document.getElementById('error-message');
-const errorText        = document.getElementById('error-text');
-
-const canvas           = document.getElementById('signature-pad');
+const sessionDate = document.getElementById('session-date');
+const sessionCreneau = document.getElementById('session-creneau');
+const clearBtn = document.getElementById('clear-signature');
+const submitBtn = document.getElementById('submit-signature');
+const successMessage = document.getElementById('success-message');
+const errorMessage = document.getElementById('error-message');
+const errorText = document.getElementById('error-text');
+const canvas = document.getElementById('signature-pad');
 const signaturePad = new SignaturePad(canvas, {
   backgroundColor: 'rgb(255, 255, 255)',
   penColor: 'rgb(0, 0, 139)',
   minWidth: 2.5,
   maxWidth: 4.5
 });
-
-let sessionData    = {};
+let sessionData = {};
 let listeApprenants = []; // Liste complète des apprenants attendus
-let monNomComplet  = ''; // Nom de l'apprenant connecté (après sélection)
-let intervalId     = null;
+let monNomComplet = ''; // Nom de l'apprenant connecté (après sélection)
+let intervalId = null;
 
 // ── Resize canvas ─────────────────────────────────────────────────────────────
 function resizeCanvas() {
@@ -33,14 +30,12 @@ function resizeCanvas() {
   signaturePad.clear();
   if (data && data.length > 0) signaturePad.fromData(data);
 }
-
 let resizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(resizeCanvas, 250);
 });
 resizeCanvas();
-
 document.getElementById('signature-pad').addEventListener('touchstart', (e) => {
   e.stopPropagation();
 }, { passive: false });
@@ -84,11 +79,9 @@ function normalise(str) {
 document.addEventListener('DOMContentLoaded', () => {
   loadSessionData();
 });
-
 async function loadSessionData() {
   const params = new URLSearchParams(window.location.search);
   const sessionCode = params.get('code');
-
   if (sessionCode) {
     try {
       const response = await fetch(`${API_URL}/sessions/${sessionCode}`);
@@ -110,7 +103,6 @@ async function loadSessionData() {
       jour: params.get('jour') || ''
     };
   }
-
   // Afficher infos session
   sessionFormateur.textContent = sessionData.formateurPrenom + ' ' + sessionData.formateurNom;
   sessionFormation.textContent = sessionData.formation;
@@ -118,12 +110,9 @@ async function loadSessionData() {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
   sessionCreneau.textContent = sessionData.creneauLabel;
-
   if (!validateSession()) return;
-
   // Charger la liste des apprenants attendus pour cette formation
   await chargerApprenants();
-
   // Démarrer la mise à jour automatique de la liste
   intervalId = setInterval(rafraichirPresences, 8000);
   rafraichirPresences(); // premier chargement immédiat
@@ -132,22 +121,18 @@ async function loadSessionData() {
 // ── Charger la liste des apprenants attendus depuis l'API ─────────────────────
 async function chargerApprenants() {
   if (!sessionData.formation) return;
-
   try {
-    // Si on n'a pas explicitement le jour, on le déduit de la date de session
     let jour = sessionData.jour;
     if (!jour && sessionData.date) {
-        const joursSemaine = ['DIMANCHE', 'LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI'];
-        jour = joursSemaine[new Date(sessionData.date).getDay()];
+      const joursSemaine = ['DIMANCHE', 'LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI'];
+      jour = joursSemaine[new Date(sessionData.date).getDay()];
     }
-
     const url = `${API_URL}/resources/apprenants?formation=${encodeURIComponent(sessionData.formation)}${jour ? '&jour=' + encodeURIComponent(jour) : ''}`;
     const res = await fetch(url);
     listeApprenants = await res.json();
-
-    // Remplir la liste déroulante
+    
     const sel = document.getElementById('apprenant-select');
-    if (sel && listeApprenants.length > 0) {
+    if (sel) {
       sel.innerHTML = '<option value="">-- Choisir mon nom --</option>';
       listeApprenants.forEach(nom => {
         const opt = document.createElement('option');
@@ -155,70 +140,72 @@ async function chargerApprenants() {
         opt.textContent = nom;
         sel.appendChild(opt);
       });
+      
+      // Ajouter l'option "Autre"
+      const optAutre = document.createElement('option');
+      optAutre.value = "AUTRE";
+      optAutre.textContent = "➕ Mon nom n'est pas dans la liste...";
+      sel.appendChild(optAutre);
 
-      // Afficher la liste déroulante, masquer les champs libres
       document.getElementById('select-apprenant-group').style.display = 'block';
       document.getElementById('saisie-manuelle-group').style.display = 'none';
       document.getElementById('saisie-prenom-group').style.display = 'none';
 
-      // Quand l'apprenant choisit son nom dans la liste
       sel.addEventListener('change', function() {
-        const nomComplet = this.value;
-        monNomComplet = nomComplet;
-        if (!nomComplet) {
+        const val = this.value;
+        const manualNomGroup = document.getElementById('saisie-manuelle-group');
+        const manualPrenomGroup = document.getElementById('saisie-prenom-group');
+        
+        if (val === "AUTRE") {
+          monNomComplet = '';
           document.getElementById('apprenant-nom').value = '';
           document.getElementById('apprenant-prenom').value = '';
-          return;
+          manualNomGroup.style.display = 'block';
+          manualPrenomGroup.style.display = 'block';
+        } else {
+          monNomComplet = val;
+          manualNomGroup.style.display = 'none';
+          manualPrenomGroup.style.display = 'none';
+          if (!val) {
+            document.getElementById('apprenant-nom').value = '';
+            document.getElementById('apprenant-prenom').value = '';
+            return;
+          }
+          const parts = val.split(' ');
+          document.getElementById('apprenant-nom').value = parts[0] || '';
+          document.getElementById('apprenant-prenom').value = parts.slice(1).join(' ') || parts[0];
+          rafraichirPresences();
         }
-        // Séparation NOM PRENOM : premier mot = NOM, reste = PRENOM
-        const parts = nomComplet.split(' ');
-        document.getElementById('apprenant-nom').value = parts[0] || '';
-        document.getElementById('apprenant-prenom').value = parts.slice(1).join(' ') || parts[0];
-        
-        // Mettre en surbrillance son nom dans la liste de présences
-        rafraichirPresences();
       });
     }
-
-    // Afficher la carte de présences
     document.getElementById('presence-card').style.display = 'block';
   } catch(e) {
     console.warn('Impossible de charger la liste des apprenants:', e);
-    // On garde les champs de saisie manuelle
   }
 }
 
 // ── Rafraîchir la liste présents/absents ──────────────────────────────────────
 async function rafraichirPresences() {
   if (!sessionData || !sessionData.sessionCode) return;
-
   try {
     const today = new Date().toISOString().split('T')[0];
     const response = await fetch(`${API_URL}/attendance/today?date=${today}&sessionCode=${sessionData.sessionCode}`);
     if (!response.ok) return;
-
     const attendances = await response.json();
     
-    // Noms ayant signé
     const nomsSignes = new Set(attendances.map(att => normalise(`${att.apprenantPrenom} ${att.apprenantNom}`)));
-
     const presents = attendances;
     const absents = listeApprenants.filter(nom => !nomsSignes.has(normalise(nom)));
-
     const total = presents.length + absents.length;
     const pct = total > 0 ? Math.round((presents.length / total) * 100) : 0;
 
-    // Mettre à jour les compteurs
     document.getElementById('count-present').textContent = presents.length;
     document.getElementById('count-absent').textContent = absents.length;
     document.getElementById('progress-bar').style.width = pct + '%';
     document.getElementById('progress-label').textContent = pct + '% de présence';
 
-    // Construire la liste unifiée (présents d'abord, absents ensuite)
     const listEl = document.getElementById('presence-list');
     let html = '';
-
-    // Présents
     presents.forEach(att => {
       const nomAff = `${att.apprenantPrenom} ${att.apprenantNom}`;
       const heure = new Date(att.timestamp).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
@@ -231,8 +218,6 @@ async function rafraichirPresences() {
         </div>
       `;
     });
-
-    // Absents (non encore signés)
     absents.forEach(nom => {
       const estMoi = monNomComplet && normalise(monNomComplet) === normalise(nom);
       const classMoi = estMoi ? ' moi' : '';
@@ -243,11 +228,9 @@ async function rafraichirPresences() {
         </div>
       `;
     });
-
     if (!html) html = '<div class="empty-list">⏳ En attente de signatures...</div>';
     listEl.innerHTML = html;
 
-    // Si l'apprenant connecté a déjà signé -> masquer le formulaire
     if (monNomComplet && nomsSignes.has(normalise(monNomComplet))) {
       document.getElementById('form-card').style.display = 'none';
       document.getElementById('signature-card').style.display = 'none';
@@ -265,16 +248,13 @@ async function rafraichirPresences() {
 function validateSession() {
   const now = new Date();
   const sessionDateObj = new Date(sessionData.date);
-  
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const sessDate = new Date(sessionDateObj.getFullYear(), sessionDateObj.getMonth(), sessionDateObj.getDate());
-
   if (sessDate.getTime() !== today.getTime()) {
     showError('Ce QR code n\'est valide que pour le ' + sessionDateObj.toLocaleDateString('fr-FR'));
     disableForm();
     return false;
   }
-
   const currentSlot = getCurrentSlot();
   if (!currentSlot || currentSlot.id !== sessionData.creneau) {
     const message = sessionData.creneau === 'matin' ? 'Le pointage du matin est terminé.' : 'Le pointage de l\'après-midi est terminé.';
@@ -282,49 +262,38 @@ function validateSession() {
     disableForm();
     return false;
   }
-
   return true;
 }
-
 function getCurrentSlot() {
   const now = new Date();
   const day = now.getDay();
   const time = now.getHours() * 60 + now.getMinutes();
-
   if (day === 0 || day === 6) return null;
   if (time >= 510 && time <= 720) return { id: 'matin', label: 'Matin (8h30 - 12h00)' };
   if (time >= 780 && time <= 990) return { id: 'apres-midi', label: 'Après-midi (13h00 - 16h30)' };
-
   return null;
 }
 
-// ── Effacer signature ──────────────────────────────────────────────────────────
 clearBtn.addEventListener('click', () => signaturePad.clear());
 
 // ── Soumettre la signature ─────────────────────────────────────────────────────
 submitBtn.addEventListener('click', async () => {
   const nomVal = document.getElementById('apprenant-nom').value.trim();
   const prenomVal = document.getElementById('apprenant-prenom').value.trim();
-
   if (!nomVal || !prenomVal) {
     alert('Veuillez sélectionner ou saisir votre nom et prénom');
     return;
   }
-
   if (signaturePad.isEmpty()) {
     alert('Veuillez signer dans le cadre prévu');
     return;
   }
-
   if (!validateSession()) return;
-
   submitBtn.disabled = true;
   submitBtn.innerHTML = 'Envoi en cours...';
-
   try {
     const position = await getLocation();
     const signatureB64 = exportSignatureCompressed(canvas);
-
     const signatureData = {
       ...sessionData,
       apprenantNom: nomVal.toUpperCase(),
@@ -335,31 +304,25 @@ submitBtn.addEventListener('click', async () => {
       longitude: position.coords.longitude,
       userAgent: navigator.userAgent
     };
-
     const response = await postWithRetry(`${API_URL}/attendance/sign`, signatureData, 2);
-
     if (!response.ok) {
       let errJson = null;
       try { errJson = await response.json(); } catch (_) {}
       let msg = errJson?.message || (response.status === 413 ? 'Signature trop lourde.' : 'Erreur serveur.');
       throw new Error(msg);
     }
-
-    // Succès : mettre à jour le nom affiché et rafraîchir
     monNomComplet = prenomVal + ' ' + nomVal.toUpperCase();
     document.getElementById('success-nom').textContent = monNomComplet;
     showSuccess();
     rafraichirPresences();
     clearInterval(intervalId);
-
   } catch (error) {
     showError(error.message || 'Erreur lors de l\'enregistrement.');
     submitBtn.disabled = false;
-    submitBtn.innerHTML = ' ✅  Valider ma Présence';
+    submitBtn.innerHTML = ' ✅ Valider ma Présence';
   }
 });
 
-// ── Géolocalisation ────────────────────────────────────────────────────────────
 function getLocation() {
   return new Promise((resolve) => {
     if (!navigator.geolocation) {
@@ -373,21 +336,17 @@ function getLocation() {
     );
   });
 }
-
-// ── Affichage succès/erreur ────────────────────────────────────────────────────
 function showSuccess() {
   document.getElementById('form-card').style.display = 'none';
   document.getElementById('signature-card').style.display = 'none';
   successMessage.classList.remove('hidden');
   successMessage.scrollIntoView({ behavior: 'smooth' });
 }
-
 function showError(message) {
   errorText.textContent = message;
   errorMessage.classList.remove('hidden');
   errorMessage.scrollIntoView({ behavior: 'smooth' });
 }
-
 function disableForm() {
   document.getElementById('apprenant-nom').disabled = true;
   document.getElementById('apprenant-prenom').disabled = true;
