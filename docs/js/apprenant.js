@@ -11,10 +11,11 @@ const errorText = document.getElementById('error-text');
 const canvas = document.getElementById('signature-pad');
 const signaturePad = new SignaturePad(canvas, {
   backgroundColor: 'rgb(255, 255, 255)',
-  penColor: 'rgb(0, 0, 139)',
-  minWidth: 2.5,
-  maxWidth: 4.5
+  penColor: 'rgb(0, 0, 0)',
+  minWidth: 1.5,
+  maxWidth: 3.5
 });
+
 let sessionData = {};
 let listeApprenants = []; // Liste complète des apprenants attendus
 let monNomComplet = ''; // Nom de l'apprenant connecté (après sélection)
@@ -30,12 +31,14 @@ function resizeCanvas() {
   signaturePad.clear();
   if (data && data.length > 0) signaturePad.fromData(data);
 }
+
 let resizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(resizeCanvas, 250);
 });
 resizeCanvas();
+
 document.getElementById('signature-pad').addEventListener('touchstart', (e) => {
   e.stopPropagation();
 }, { passive: false });
@@ -79,9 +82,11 @@ function normalise(str) {
 document.addEventListener('DOMContentLoaded', () => {
   loadSessionData();
 });
+
 async function loadSessionData() {
   const params = new URLSearchParams(window.location.search);
   const sessionCode = params.get('code');
+  
   if (sessionCode) {
     try {
       const response = await fetch(`${API_URL}/sessions/${sessionCode}`);
@@ -103,6 +108,7 @@ async function loadSessionData() {
       jour: params.get('jour') || ''
     };
   }
+
   // Afficher infos session
   sessionFormateur.textContent = sessionData.formateurPrenom + ' ' + sessionData.formateurNom;
   sessionFormation.textContent = sessionData.formation;
@@ -110,9 +116,12 @@ async function loadSessionData() {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
   sessionCreneau.textContent = sessionData.creneauLabel;
+
   if (!validateSession()) return;
+
   // Charger la liste des apprenants attendus pour cette formation
   await chargerApprenants();
+
   // Démarrer la mise à jour automatique de la liste
   intervalId = setInterval(rafraichirPresences, 8000);
   rafraichirPresences(); // premier chargement immédiat
@@ -127,6 +136,7 @@ async function chargerApprenants() {
       const joursSemaine = ['DIMANCHE', 'LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI'];
       jour = joursSemaine[new Date(sessionData.date).getDay()];
     }
+    
     const url = `${API_URL}/resources/apprenants?formation=${encodeURIComponent(sessionData.formation)}${jour ? '&jour=' + encodeURIComponent(jour) : ''}`;
     const res = await fetch(url);
     listeApprenants = await res.json();
@@ -196,6 +206,7 @@ async function rafraichirPresences() {
     const nomsSignes = new Set(attendances.map(att => normalise(`${att.apprenantPrenom} ${att.apprenantNom}`)));
     const presents = attendances;
     const absents = listeApprenants.filter(nom => !nomsSignes.has(normalise(nom)));
+
     const total = presents.length + absents.length;
     const pct = total > 0 ? Math.round((presents.length / total) * 100) : 0;
 
@@ -206,6 +217,7 @@ async function rafraichirPresences() {
 
     const listEl = document.getElementById('presence-list');
     let html = '';
+
     presents.forEach(att => {
       const nomAff = `${att.apprenantPrenom} ${att.apprenantNom}`;
       const heure = new Date(att.timestamp).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
@@ -218,6 +230,7 @@ async function rafraichirPresences() {
         </div>
       `;
     });
+
     absents.forEach(nom => {
       const estMoi = monNomComplet && normalise(monNomComplet) === normalise(nom);
       const classMoi = estMoi ? ' moi' : '';
@@ -228,6 +241,7 @@ async function rafraichirPresences() {
         </div>
       `;
     });
+
     if (!html) html = '<div class="empty-list">⏳ En attente de signatures...</div>';
     listEl.innerHTML = html;
 
@@ -250,11 +264,13 @@ function validateSession() {
   const sessionDateObj = new Date(sessionData.date);
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const sessDate = new Date(sessionDateObj.getFullYear(), sessionDateObj.getMonth(), sessionDateObj.getDate());
+
   if (sessDate.getTime() !== today.getTime()) {
     showError('Ce QR code n\'est valide que pour le ' + sessionDateObj.toLocaleDateString('fr-FR'));
     disableForm();
     return false;
   }
+
   const currentSlot = getCurrentSlot();
   if (!currentSlot || currentSlot.id !== sessionData.creneau) {
     const message = sessionData.creneau === 'matin' ? 'Le pointage du matin est terminé.' : 'Le pointage de l\'après-midi est terminé.';
@@ -264,6 +280,7 @@ function validateSession() {
   }
   return true;
 }
+
 function getCurrentSlot() {
   const now = new Date();
   const day = now.getDay();
@@ -280,6 +297,7 @@ clearBtn.addEventListener('click', () => signaturePad.clear());
 submitBtn.addEventListener('click', async () => {
   const nomVal = document.getElementById('apprenant-nom').value.trim();
   const prenomVal = document.getElementById('apprenant-prenom').value.trim();
+
   if (!nomVal || !prenomVal) {
     alert('Veuillez sélectionner ou saisir votre nom et prénom');
     return;
@@ -289,11 +307,14 @@ submitBtn.addEventListener('click', async () => {
     return;
   }
   if (!validateSession()) return;
+
   submitBtn.disabled = true;
   submitBtn.innerHTML = 'Envoi en cours...';
+
   try {
     const position = await getLocation();
     const signatureB64 = exportSignatureCompressed(canvas);
+    
     const signatureData = {
       ...sessionData,
       apprenantNom: nomVal.toUpperCase(),
@@ -304,6 +325,7 @@ submitBtn.addEventListener('click', async () => {
       longitude: position.coords.longitude,
       userAgent: navigator.userAgent
     };
+
     const response = await postWithRetry(`${API_URL}/attendance/sign`, signatureData, 2);
     if (!response.ok) {
       let errJson = null;
@@ -311,6 +333,7 @@ submitBtn.addEventListener('click', async () => {
       let msg = errJson?.message || (response.status === 413 ? 'Signature trop lourde.' : 'Erreur serveur.');
       throw new Error(msg);
     }
+
     monNomComplet = prenomVal + ' ' + nomVal.toUpperCase();
     document.getElementById('success-nom').textContent = monNomComplet;
     showSuccess();
@@ -336,17 +359,20 @@ function getLocation() {
     );
   });
 }
+
 function showSuccess() {
   document.getElementById('form-card').style.display = 'none';
   document.getElementById('signature-card').style.display = 'none';
   successMessage.classList.remove('hidden');
   successMessage.scrollIntoView({ behavior: 'smooth' });
 }
+
 function showError(message) {
   errorText.textContent = message;
   errorMessage.classList.remove('hidden');
   errorMessage.scrollIntoView({ behavior: 'smooth' });
 }
+
 function disableForm() {
   document.getElementById('apprenant-nom').disabled = true;
   document.getElementById('apprenant-prenom').disabled = true;
