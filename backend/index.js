@@ -17,11 +17,7 @@ app.use('/api/resources', resourcesRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-    res.json({ 
-        status: 'OK', 
-        timestamp: new Date().toISOString(),
-        storage: 'Google Sheets'
-    });
+    res.json({ status: 'OK', timestamp: new Date().toISOString(), storage: 'Google Sheets' });
 });
 
 // Générer un code court (6 caractères alphanumériques)
@@ -37,38 +33,35 @@ function generateSessionCode() {
 // Route POST : Créer une session
 app.post('/api/sessions', async (req, res) => {
     try {
-        const { formateurNom, formateurPrenom, formation, date, creneau, creneauLabel } = req.body;
-        
+        const { formateurNom, formateurPrenom, formation, jour, date, creneau, creneauLabel } = req.body;
+
         if (!formateurNom || !formateurPrenom || !formation || !date || !creneau) {
             return res.status(400).json({ error: 'Données manquantes' });
         }
-        
+
         // Générer un code unique
         const sessionCode = generateSessionCode();
-        
         const sessionData = {
             sessionCode,
             formateurNom,
             formateurPrenom,
             formation,
+            jour: jour || null, // <-- Ajout du jour (AFC ou jour de la semaine)
             date,
             creneau,
             creneauLabel,
             createdAt: new Date().toISOString()
         };
-        
+
         // Sauvegarder dans Google Sheets
         await saveSessions(sessionData);
-        
+
         console.log(`✅ Session créée: ${sessionCode}`);
         res.json({ sessionCode });
-        
+
     } catch (error) {
         console.error('❌ Erreur création session:', error);
-        res.status(500).json({ 
-            error: 'Erreur serveur', 
-            details: error.message 
-        });
+        res.status(500).json({ error: 'Erreur serveur', details: error.message });
     }
 });
 
@@ -76,35 +69,31 @@ app.post('/api/sessions', async (req, res) => {
 app.get('/api/sessions/:code', async (req, res) => {
     try {
         const { code } = req.params;
-        
         console.log(`🔍 Recherche session: ${code}`);
-        
+
         const session = await getSessionByCode(code);
-        
+
         if (!session) {
             console.log(`❌ Session non trouvée: ${code}`);
             return res.status(404).json({ error: 'Session non trouvée ou expirée' });
         }
-        
+
         // Vérifier si la session a plus de 24h (optionnel)
         const sessionDate = new Date(session.createdAt);
         const now = new Date();
         const hoursDiff = (now - sessionDate) / (1000 * 60 * 60);
-        
+
         if (hoursDiff > 24) {
             console.log(`⏰ Session expirée: ${code} (${hoursDiff.toFixed(1)}h)`);
             return res.status(404).json({ error: 'Session expirée (valide 24h)' });
         }
-        
+
         console.log(`✅ Session trouvée: ${code}`);
         res.json(session);
-        
+
     } catch (error) {
         console.error('❌ Erreur récupération session:', error);
-        res.status(500).json({ 
-            error: 'Erreur serveur',
-            details: error.message 
-        });
+        res.status(500).json({ error: 'Erreur serveur', details: error.message });
     }
 });
 
