@@ -7,7 +7,7 @@
     <link rel="apple-touch-icon" href="img/Logo success Formation rec.PNG">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        .form-group select {
+        .form-group select, .form-group input {
             width: 100%;
             padding: 12px 15px;
             border: 2px solid #e0e0e0;
@@ -16,8 +16,10 @@
             background: white;
             appearance: auto;
             cursor: pointer;
+            box-sizing: border-box;
         }
-        .form-group select:focus { border-color: #ce2a45; outline: none; }
+        .form-group input { cursor: text; margin-top: 8px; }
+        .form-group select:focus, .form-group input:focus { border-color: #ce2a45; outline: none; }
         
         .loading-spinner {
             display: inline-block;
@@ -31,7 +33,6 @@
             vertical-align: middle;
         }
         @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
-
         .apprenants-preview {
             background: #f8f9fa;
             border: 1px solid #e0e0e0;
@@ -45,7 +46,6 @@
         }
         .apprenant-item { padding: 4px 0; border-bottom: 1px solid #eee; }
         .apprenant-item:last-child { border-bottom: none; }
-
         .badge-count {
             display: inline-block;
             background: #ce2a45;
@@ -56,7 +56,6 @@
             font-weight: bold;
             margin-left: 6px;
         }
-
         optgroup { font-weight: bold; color: #333; }
         
         .info-jour {
@@ -68,7 +67,6 @@
             margin-bottom: 12px;
             color: #333;
         }
-
         /* === STYLES SUIVI PRÉSENCES === */
         .attendance-header { padding: 10px 0 14px; }
         .attendance-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; font-size: 14px; }
@@ -79,12 +77,10 @@
         .progress-bar-container { background: #f0f0f0; border-radius: 20px; height: 10px; overflow: hidden; margin-bottom: 4px; }
         .progress-bar { height: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71); border-radius: 20px; transition: width 0.6s ease; }
         .progress-label { font-size: 12px; color: #888; text-align: right; }
-
         .attendance-group { margin-top: 14px; }
         .group-title { font-weight: 700; font-size: 13px; padding: 6px 10px; border-radius: 6px; margin-bottom: 6px; }
         .present-title { background: #eafaf1; color: #27ae60; border-left: 4px solid #27ae60; }
         .absent-title { background: #fdf3f3; color: #e74c3c; border-left: 4px solid #e74c3c; }
-
         .attendance-item {
             display: flex;
             justify-content: space-between;
@@ -124,6 +120,9 @@
                     <select id="session-select" required>
                         <option value="">⏳ Chargement des sessions...</option>
                     </select>
+                    <div id="manual-session-group" style="display:none;">
+                        <input type="text" id="manual-formation" placeholder="Nom de la formation (ex: AMUM AFC)">
+                    </div>
                 </div>
 
                 <div id="formateur-section" style="display:none;">
@@ -132,6 +131,9 @@
                         <select id="formateur-select" required>
                             <option value="">-- Sélectionner votre nom --</option>
                         </select>
+                        <div id="manual-formateur-group" style="display:none;">
+                            <input type="text" id="manual-formateur-nom" placeholder="Votre Nom et Prénom">
+                        </div>
                     </div>
                 </div>
 
@@ -206,7 +208,7 @@
             try {
                 const res = await fetch(`${API_RESOURCES}/resources/all`);
                 const ressources = await res.json();
-
+                
                 const sessionsMap = new Map();
                 ressources.forEach(r => {
                     const key = `${r.jour}||${r.formation}`;
@@ -222,7 +224,7 @@
                 });
 
                 selectSession.innerHTML = '<option value="">-- Sélectionner une session --</option>';
-
+                
                 if (sessionsAujourdHui.length > 0) {
                     const g1 = document.createElement('optgroup');
                     g1.label = `📅 Sessions ${jourActuel}`;
@@ -247,7 +249,15 @@
                     selectSession.appendChild(g2);
                 }
 
-                if (!sessionsAujourdHui.length && !sessionsAFC.length) selectSession.innerHTML = '<option value="">Aucune session disponible</option>';
+                // Option Autre
+                const optAutre = document.createElement('option');
+                optAutre.value = "AUTRE";
+                optAutre.textContent = "➕ Autre formation (saisie manuelle)...";
+                selectSession.appendChild(optAutre);
+
+                if (!sessionsAujourdHui.length && !sessionsAFC.length) {
+                   // Si rien trouvé mais on garde l'option Autre
+                }
 
             } catch(e) {
                 console.error('❌ Erreur sessions:', e);
@@ -257,6 +267,7 @@
 
         document.getElementById('session-select').addEventListener('change', async function() {
             const val = this.value;
+            const manualGroup = document.getElementById('manual-session-group');
             const formateurSection = document.getElementById('formateur-section');
             const apprenantsSection = document.getElementById('apprenants-section');
             const listEl = document.getElementById('apprenants-list');
@@ -270,15 +281,30 @@
             apprenantsSection.style.display = 'none';
             btnGenerate.disabled = true;
             apprenantsActuels = [];
-
+            
             if (typeof setListeApprenants === 'function') setListeApprenants([]);
-            if (typeof setJourActuel === 'function') setJourActuel(null); // <-- Reset jour
+            if (typeof setJourActuel === 'function') setJourActuel(null);
 
-            if (!val) return;
+            if (!val) {
+                manualGroup.style.display = 'none';
+                return;
+            }
 
+            if (val === "AUTRE") {
+                manualGroup.style.display = 'block';
+                document.getElementById('manual-formation').value = '';
+                
+                // Configurer formateur pour Autre
+                const selF = document.getElementById('formateur-select');
+                selF.innerHTML = '<option value="">-- Sélectionner votre nom --</option><option value="AUTRE">➕ Autre formateur (saisie manuelle)...</option>';
+                formateurSection.style.display = 'block';
+                return;
+            }
+
+            manualGroup.style.display = 'none';
             const { jour, formation } = JSON.parse(val);
             document.getElementById('formation').value = formation;
-            if (typeof setJourActuel === 'function') setJourActuel(jour); // <-- Correction : Transmettre le jour correct
+            if (typeof setJourActuel === 'function') setJourActuel(jour);
 
             // Charger formateurs
             try {
@@ -292,6 +318,12 @@
                     opt.textContent = nom;
                     sel.appendChild(opt);
                 });
+                // Toujours ajouter Autre
+                const optAutreF = document.createElement('option');
+                optAutreF.value = "AUTRE";
+                optAutreF.textContent = "➕ Mon nom n'est pas dans la liste...";
+                sel.appendChild(optAutreF);
+
                 formateurSection.style.display = 'block';
             } catch(e) { console.error('❌ Erreur formateurs:', e); }
 
@@ -314,15 +346,25 @@
         });
 
         document.getElementById('formateur-select').addEventListener('change', function() {
-            const nomComplet = this.value;
+            const val = this.value;
+            const manualGroup = document.getElementById('manual-formateur-group');
             const btnGenerate = document.getElementById('generate-qr');
-            if (!nomComplet) {
-                document.getElementById('formateur-nom').value = '';
-                document.getElementById('formateur-prenom').value = '';
+
+            if (!val) {
+                manualGroup.style.display = 'none';
                 btnGenerate.disabled = true;
                 return;
             }
-            const parts = nomComplet.split(' ');
+
+            if (val === "AUTRE") {
+                manualGroup.style.display = 'block';
+                document.getElementById('manual-formateur-nom').value = '';
+                btnGenerate.disabled = false;
+                return;
+            }
+
+            manualGroup.style.display = 'none';
+            const parts = val.split(' ');
             document.getElementById('formateur-nom').value = parts[0] || '';
             document.getElementById('formateur-prenom').value = parts.slice(1).join(' ') || parts[0];
             btnGenerate.disabled = false;
