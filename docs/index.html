@@ -96,6 +96,84 @@
         .att-nom { font-weight: 500; }
         .att-heure { font-size: 12px; color: #27ae60; font-weight: 600; white-space: nowrap; }
         .att-statut { font-size: 12px; color: #bbb; font-style: italic; }
+
+        /* === STYLES SIGNALEMENT PÉDAGOGIQUE === */
+        .btn-signalement {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: opacity 0.2s;
+        }
+        .btn-signalement:hover { opacity: 0.88; }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.55);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+        .modal-box {
+            background: white;
+            border-radius: 14px;
+            padding: 24px;
+            max-width: 480px;
+            width: 100%;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-box h3 { margin-top: 0; color: #ce2a45; font-size: 18px; }
+        .modal-box .form-group { margin-bottom: 14px; }
+        .modal-box label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 14px; color: #444; }
+        .modal-box select, .modal-box textarea {
+            width: 100%; padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        .modal-box select:focus, .modal-box textarea:focus { border-color: #ce2a45; outline: none; }
+        .modal-box textarea { resize: vertical; min-height: 90px; }
+        .modal-actions {
+            display: flex; gap: 10px;
+            justify-content: flex-end;
+            margin-top: 18px;
+        }
+        .btn-annuler {
+            padding: 10px 20px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+        }
+        .btn-envoyer {
+            padding: 10px 22px;
+            background: #ce2a45;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 700;
+        }
+        .btn-envoyer:hover { background: #a8223a; }
     </style>
 </head>
 <body>
@@ -179,7 +257,52 @@
                     <div class="info-text">⏳ En attente de signatures...</div>
                 </div>
             </div>
+
+            <!-- CARTE SIGNALEMENT PÉDAGOGIQUE -->
+            <div class="card" id="signalement-section" style="display:none;">
+                <h2><span class="icon">📢</span> Signalement pédagogique</h2>
+                <p style="color:#666; font-size:14px; margin-bottom:14px;">Déclarer un retard, une absence ou transmettre une observation au service pédagogique.</p>
+                <button class="btn-signalement" onclick="ouvrirModalSignalement()">
+                    <span>✉️</span> Déclarer un retard / Observation
+                </button>
+            </div>
         </main>
+    </div>
+
+    <!-- MODALE SIGNALEMENT -->
+    <div id="modal-signalement" class="modal-overlay">
+        <div class="modal-box">
+            <h3>📢 Signalement pédagogique</h3>
+
+            <div class="form-group">
+                <label for="signal-type">Type de signalement *</label>
+                <select id="signal-type">
+                    <option value="">-- Choisir --</option>
+                    <option value="retard">⏰ Retard apprenant</option>
+                    <option value="retard_formateur">⏰ Retard formateur</option>
+                    <option value="absence">🚫 Absence non justifiée</option>
+                    <option value="observation">💬 Observation pédagogique</option>
+                    <option value="incident">⚠️ Incident</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="signal-apprenant-group" style="display:none;">
+                <label for="signal-apprenant">Apprenant concerné</label>
+                <select id="signal-apprenant">
+                    <option value="">-- Sélectionner (optionnel) --</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="signal-message">Observation / Message *</label>
+                <textarea id="signal-message" placeholder="Décrivez le retard, l'observation ou l'incident..."></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-annuler" onclick="fermerModalSignalement()">Annuler</button>
+                <button class="btn-envoyer" onclick="envoyerSignalement()">✉️ Envoyer par mail</button>
+            </div>
+        </div>
     </div>
 
     <!-- Bibliothèques -->
