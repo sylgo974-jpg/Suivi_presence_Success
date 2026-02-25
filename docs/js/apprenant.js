@@ -286,8 +286,8 @@ function getCurrentSlot() {
   const day = now.getDay();
   const time = now.getHours() * 60 + now.getMinutes();
   if (day === 0 || day === 6) return null;
-  if (time >= 510 && time <= 720) return { id: 'matin', label: 'Matin (8h30 - 12h00)' };
-  if (time >= 780 && time <= 990) return { id: 'apres-midi', label: 'Après-midi (13h00 - 16h30)' };
+    if (time >= 420 && time <= 750) return { id: 'matin', label: 'Matin (8h30 - 12h00)' };
+    if (time >= 720 && time <= 1080) return { id: 'apres-midi', label: 'Après-midi (13h00 - 16h30)' };
   return null;
 }
 
