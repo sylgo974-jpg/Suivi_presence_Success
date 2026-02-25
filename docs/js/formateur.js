@@ -151,6 +151,8 @@ function displayQRCode(url) {
   `;
   qrSection.classList.remove('hidden');
   document.getElementById('attendance-section').classList.remove('hidden');
+  // Afficher la section signalement pédagogique
+  document.getElementById('signalement-section').style.display = 'block';
   qrSection.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -222,4 +224,83 @@ function renderAttendance(presents, absents) {
     html = '<div class="attendance-item">En attente de signatures...</div>';
   }
   attendanceList.innerHTML = html;
+}
+
+// =============================================
+// === SIGNALEMENT PÉDAGOGIQUE ===
+// =============================================
+
+function ouvrirModalSignalement() {
+  const modal = document.getElementById('modal-signalement');
+  modal.style.display = 'flex';
+
+  // Pré-remplir la liste des apprenants dans la modale
+  const selectApprenant = document.getElementById('signal-apprenant');
+  selectApprenant.innerHTML = '<option value="">-- Sélectionner (optionnel) --</option>';
+  listeApprenants.forEach(nom => {
+    const opt = document.createElement('option');
+    opt.value = nom;
+    opt.textContent = nom;
+    selectApprenant.appendChild(opt);
+  });
+
+  // Afficher/masquer la sélection d'apprenant selon le type
+  const signalTypeEl = document.getElementById('signal-type');
+  signalTypeEl.onchange = function() {
+    const types = ['retard', 'absence'];
+    const group = document.getElementById('signal-apprenant-group');
+    group.style.display = types.includes(this.value) ? 'block' : 'none';
+  };
+}
+
+function fermerModalSignalement() {
+  document.getElementById('modal-signalement').style.display = 'none';
+  document.getElementById('signal-type').value = '';
+  document.getElementById('signal-message').value = '';
+  document.getElementById('signal-apprenant').value = '';
+  document.getElementById('signal-apprenant-group').style.display = 'none';
+}
+
+function envoyerSignalement() {
+  const type = document.getElementById('signal-type').value;
+  const message = document.getElementById('signal-message').value.trim();
+  const apprenant = document.getElementById('signal-apprenant').value;
+
+  if (!type) { alert('Veuillez sélectionner un type de signalement.'); return; }
+  if (!message) { alert('Veuillez rédiger un message ou une observation.'); return; }
+
+  // Infos de session courante
+  const formationVal = sessionData ? sessionData.formation : 'Non renseignée';
+  const formateurVal = sessionData ? `${sessionData.formateurPrenom} ${sessionData.formateurNom}` : 'Non renseigné';
+  const dateVal = sessionData ? sessionData.date : new Date().toISOString().split('T')[0];
+  const creneauVal = sessionData ? sessionData.creneauLabel : 'Non renseigné';
+
+  const typesLabels = {
+    retard: '⏰ Retard apprenant',
+    retard_formateur: '⏰ Retard formateur',
+    absence: '🚫 Absence non justifiée',
+    observation: '💬 Observation pédagogique',
+    incident: '⚠️ Incident'
+  };
+
+  const sujet = encodeURIComponent(`[Signalement] ${typesLabels[type]} – ${formationVal} – ${dateVal}`);
+
+  const corps = encodeURIComponent(
+`Bonjour,
+
+Type de signalement : ${typesLabels[type]}
+Date : ${dateVal}
+Créneau : ${creneauVal}
+Formation : ${formationVal}
+Formateur : ${formateurVal}${apprenant ? `\nApprenant concerné : ${apprenant}` : ''}
+
+Observation :
+${message}
+
+---
+Message envoyé depuis l'interface formateur Success Formation`
+  );
+
+  window.location.href = `mailto:pedagogie@successformation.re?subject=${sujet}&body=${corps}`;
+  fermerModalSignalement();
 }
