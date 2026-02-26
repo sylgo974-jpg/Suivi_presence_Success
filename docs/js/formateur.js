@@ -139,7 +139,7 @@ function displayQRCode(url) {
     text: url,
     width: size,
     height: size,
-    colorDark: "#ce2a45",
+    colorDark: "#000000",
     colorLight: "#ffffff",
     correctLevel: QRCode.CorrectLevel.H
   });
