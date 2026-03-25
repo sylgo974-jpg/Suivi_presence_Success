@@ -174,6 +174,123 @@
             font-weight: 700;
         }
         .btn-envoyer:hover { background: #a8223a; }
+
+        /* === STYLES SIGNATURE FORMATEUR === */
+        .signature-formateur-section {
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .signature-formateur-section h3 {
+            font-size: 15px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .signature-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .sig-tab-btn {
+            flex: 1;
+            padding: 10px 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: #f8f9fa;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #555;
+            text-align: center;
+        }
+        .sig-tab-btn.active {
+            border-color: #ce2a45;
+            background: #fff0f2;
+            color: #ce2a45;
+        }
+        .sig-tab-btn.signed {
+            border-color: #27ae60;
+            background: #eafaf1;
+            color: #27ae60;
+        }
+        .sig-canvas-wrap {
+            position: relative;
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            background: #fafafa;
+            overflow: hidden;
+            touch-action: none;
+        }
+        .sig-canvas-wrap canvas {
+            display: block;
+            width: 100%;
+            cursor: crosshair;
+        }
+        .sig-canvas-placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #bbb;
+            font-size: 13px;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .sig-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .btn-sig-clear {
+            flex: 1;
+            padding: 9px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+            font-size: 14px;
+            cursor: pointer;
+            color: #666;
+        }
+        .btn-sig-save {
+            flex: 2;
+            padding: 9px;
+            border: none;
+            border-radius: 8px;
+            background: #ce2a45;
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .btn-sig-save:hover { background: #a8223a; }
+        .sig-saved-preview {
+            display: none;
+            margin-top: 10px;
+            text-align: center;
+        }
+        .sig-saved-preview img {
+            max-width: 100%;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 6px;
+            background: white;
+        }
+        .sig-saved-label {
+            font-size: 12px;
+            color: #27ae60;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .sig-redo-btn {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #ce2a45;
+            background: none;
+            border: none;
+            cursor: pointer;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -231,6 +348,52 @@
                     <p><strong>📅 Date :</strong> <span id="current-date"></span></p>
                     <p><strong>🕒 Créneau :</strong> <span id="current-slot">Chargement...</span></p>
                 </div>
+
+                <!-- ===== SECTION SIGNATURE FORMATEUR ===== -->
+                <div class="signature-formateur-section" id="signature-formateur-section">
+                    <h3>✍️ Signature du formateur</h3>
+                    <p style="font-size:13px;color:#666;margin-bottom:10px;">Signez une fois par créneau au moment de la création de la session.</p>
+
+                    <div class="signature-tabs">
+                        <button class="sig-tab-btn active" id="tab-matin" onclick="switchSigTab('matin')">🌅 Matin</button>
+                        <button class="sig-tab-btn" id="tab-apres-midi" onclick="switchSigTab('apres-midi')">🌇 Après-midi</button>
+                    </div>
+
+                    <!-- Canvas Matin -->
+                    <div id="sig-panel-matin">
+                        <div class="sig-canvas-wrap">
+                            <canvas id="sig-canvas-matin" height="120"></canvas>
+                            <span class="sig-canvas-placeholder" id="placeholder-matin">✍️ Signez ici (matin)</span>
+                        </div>
+                        <div class="sig-actions">
+                            <button class="btn-sig-clear" onclick="clearCanvas('matin')">🗑️ Effacer</button>
+                            <button class="btn-sig-save" onclick="sauvegarderSignature('matin')">✅ Valider signature matin</button>
+                        </div>
+                        <div class="sig-saved-preview" id="preview-matin">
+                            <div class="sig-saved-label">✅ Signature matin enregistrée</div>
+                            <img id="preview-img-matin" src="" alt="Signature matin">
+                            <br><button class="sig-redo-btn" onclick="refaireSignature('matin')">Refaire la signature</button>
+                        </div>
+                    </div>
+
+                    <!-- Canvas Après-midi -->
+                    <div id="sig-panel-apres-midi" style="display:none;">
+                        <div class="sig-canvas-wrap">
+                            <canvas id="sig-canvas-apres-midi" height="120"></canvas>
+                            <span class="sig-canvas-placeholder" id="placeholder-apres-midi">✍️ Signez ici (après-midi)</span>
+                        </div>
+                        <div class="sig-actions">
+                            <button class="btn-sig-clear" onclick="clearCanvas('apres-midi')">🗑️ Effacer</button>
+                            <button class="btn-sig-save" onclick="sauvegarderSignature('apres-midi')">✅ Valider signature après-midi</button>
+                        </div>
+                        <div class="sig-saved-preview" id="preview-apres-midi">
+                            <div class="sig-saved-label">✅ Signature après-midi enregistrée</div>
+                            <img id="preview-img-apres-midi" src="" alt="Signature après-midi">
+                            <br><button class="sig-redo-btn" onclick="refaireSignature('apres-midi')">Refaire la signature</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- ===== FIN SECTION SIGNATURE ===== -->
 
                 <button id="generate-qr" class="btn btn-primary" disabled>
                     <span class="icon">🔗</span> Générer QR Code
@@ -378,10 +541,6 @@
                 optAutre.textContent = "➕ Autre formation (saisie manuelle)...";
                 selectSession.appendChild(optAutre);
 
-                if (!sessionsAujourdHui.length && !sessionsAFC.length) {
-                   // Si rien trouvé mais on garde l'option Autre
-                }
-
             } catch(e) {
                 console.error('❌ Erreur sessions:', e);
                 selectSession.innerHTML = '<option value="">Erreur de chargement</option>';
@@ -417,7 +576,6 @@
                 manualGroup.style.display = 'block';
                 document.getElementById('manual-formation').value = '';
                 
-                // Configurer formateur pour Autre
                 const selF = document.getElementById('formateur-select');
                 selF.innerHTML = '<option value="">-- Sélectionner votre nom --</option><option value="AUTRE">➕ Autre formateur (saisie manuelle)...</option>';
                 formateurSection.style.display = 'block';
@@ -441,7 +599,6 @@
                     opt.textContent = nom;
                     sel.appendChild(opt);
                 });
-                // Toujours ajouter Autre
                 const optAutreF = document.createElement('option');
                 optAutreF.value = "AUTRE";
                 optAutreF.textContent = "➕ Mon nom n'est pas dans la liste...";
@@ -494,6 +651,136 @@
         });
 
         window.addEventListener('DOMContentLoaded', initSessions);
+
+        /* =========================================
+           LOGIQUE SIGNATURE FORMATEUR
+        ========================================= */
+        const sigState = {
+            matin: { signed: false, data: null },
+            'apres-midi': { signed: false, data: null }
+        };
+        let activeTab = 'matin';
+        let sigDrawing = {};
+
+        function initCanvas(creneau) {
+            const canvas = document.getElementById(`sig-canvas-${creneau}`);
+            const wrap = canvas.parentElement;
+            canvas.width = wrap.offsetWidth || 320;
+            canvas.height = 120;
+            const ctx = canvas.getContext('2d');
+            ctx.strokeStyle = '#1a1a2e';
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            sigDrawing[creneau] = { drawing: false, ctx };
+
+            function getPos(e) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                if (e.touches) {
+                    return { x: (e.touches[0].clientX - rect.left) * scaleX, y: (e.touches[0].clientY - rect.top) * scaleY };
+                }
+                return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+            }
+
+            function startDraw(e) {
+                e.preventDefault();
+                sigDrawing[creneau].drawing = true;
+                const pos = getPos(e);
+                ctx.beginPath();
+                ctx.moveTo(pos.x, pos.y);
+                document.getElementById(`placeholder-${creneau}`).style.display = 'none';
+            }
+            function draw(e) {
+                if (!sigDrawing[creneau].drawing) return;
+                e.preventDefault();
+                const pos = getPos(e);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.stroke();
+            }
+            function endDraw(e) {
+                sigDrawing[creneau].drawing = false;
+            }
+
+            canvas.addEventListener('mousedown', startDraw);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', endDraw);
+            canvas.addEventListener('mouseleave', endDraw);
+            canvas.addEventListener('touchstart', startDraw, { passive: false });
+            canvas.addEventListener('touchmove', draw, { passive: false });
+            canvas.addEventListener('touchend', endDraw);
+        }
+
+        function clearCanvas(creneau) {
+            const canvas = document.getElementById(`sig-canvas-${creneau}`);
+            const ctx = sigDrawing[creneau] ? sigDrawing[creneau].ctx : canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            document.getElementById(`placeholder-${creneau}`).style.display = '';
+        }
+
+        function sauvegarderSignature(creneau) {
+            const canvas = document.getElementById(`sig-canvas-${creneau}`);
+            const ctx = canvas.getContext('2d');
+            const pixelData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            const hasContent = Array.from(pixelData).some((v, i) => i % 4 === 3 && v > 0);
+            if (!hasContent) {
+                alert('Veuillez signer avant de valider.');
+                return;
+            }
+            const dataUrl = canvas.toDataURL('image/png');
+            sigState[creneau].signed = true;
+            sigState[creneau].data = dataUrl;
+
+            // Afficher l'aperçu
+            document.getElementById(`preview-img-${creneau}`).src = dataUrl;
+            document.getElementById(`preview-${creneau}`).style.display = 'block';
+            canvas.parentElement.style.display = 'none';
+            document.querySelectorAll(`.sig-canvas-wrap + .sig-actions`).forEach(el => {
+                if (el.closest(`#sig-panel-${creneau}`)) el.style.display = 'none';
+            });
+
+            // Marquer l'onglet comme signé
+            const tabBtn = document.getElementById(`tab-${creneau}`);
+            tabBtn.classList.remove('active');
+            tabBtn.classList.add('signed');
+            tabBtn.textContent = creneau === 'matin' ? '✅ Matin signé' : '✅ Après-midi signé';
+        }
+
+        function refaireSignature(creneau) {
+            sigState[creneau].signed = false;
+            sigState[creneau].data = null;
+            document.getElementById(`preview-${creneau}`).style.display = 'none';
+            const canvas = document.getElementById(`sig-canvas-${creneau}`);
+            canvas.parentElement.style.display = '';
+            canvas.parentElement.nextElementSibling.style.display = '';
+            clearCanvas(creneau);
+            const tabBtn = document.getElementById(`tab-${creneau}`);
+            tabBtn.classList.remove('signed');
+            tabBtn.classList.add('active');
+            tabBtn.textContent = creneau === 'matin' ? '🌅 Matin' : '🌇 Après-midi';
+        }
+
+        function switchSigTab(creneau) {
+            activeTab = creneau;
+            document.getElementById('sig-panel-matin').style.display = creneau === 'matin' ? 'block' : 'none';
+            document.getElementById('sig-panel-apres-midi').style.display = creneau === 'apres-midi' ? 'block' : 'none';
+            document.getElementById('tab-matin').classList.toggle('active', creneau === 'matin' && !sigState['matin'].signed);
+            document.getElementById('tab-apres-midi').classList.toggle('active', creneau === 'apres-midi' && !sigState['apres-midi'].signed);
+        }
+
+        // Exposer sigState pour formateur.js si besoin
+        window.getSignatureFormateur = function(creneau) {
+            return sigState[creneau] ? sigState[creneau].data : null;
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initCanvas('matin');
+            initCanvas('apres-midi');
+            // Auto-sélection de l'onglet selon le créneau actuel
+            const slot = typeof getCurrentSlot === 'function' ? getCurrentSlot() : null;
+            if (slot && slot.id === 'apres-midi') switchSigTab('apres-midi');
+        });
     </script>
 </body>
 </html>
