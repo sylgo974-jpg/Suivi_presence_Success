@@ -325,24 +325,27 @@ function envoyerSignalement() {
     if (!type)    { alert('Veuillez sélectionner un type de signalement.'); return; }
     if (!message) { alert('Veuillez rédiger un message ou une observation.'); return; }
 
-    const formationVal = sessionData ? sessionData.formation                              : 'Non renseignée';
+    const formationVal = sessionData ? sessionData.formation                                        : 'Non renseignée';
     const formateurVal = sessionData ? `${sessionData.formateurPrenom} ${sessionData.formateurNom}` : 'Non renseigné';
-    const dateVal      = sessionData ? sessionData.date                                   : new Date().toISOString().split('T')[0];
-    const creneauVal   = sessionData ? sessionData.creneauLabel                           : 'Non renseigné';
+    const dateVal      = sessionData ? sessionData.date                                             : new Date().toISOString().split('T')[0];
+    const creneauVal   = sessionData ? sessionData.creneauLabel                                     : 'Non renseigné';
 
+    // ✅ FIX #3 : tous les types présents + valeur par défaut si inconnu
     const typesLabels = {
-        retard:      '⏰ Retard apprenant',
-        absence:     '🚫 Absence non justifiée',
-        observation: '💬 Observation pédagogique',
-        incident:    '⚠️ Incident'
+        retard:           '⏰ Retard apprenant',
+        retard_formateur: '⏰ Retard formateur',     // ← manquait dans ancienne version
+        absence:          '🚫 Absence non justifiée',
+        observation:      '💬 Observation pédagogique',
+        incident:         '⚠️ Incident'
     };
+    const typeLabel = typesLabels[type] || type; // fallback = la valeur brute
 
-    const sujet = encodeURIComponent(`[Signalement] ${typesLabels[type]} – ${formationVal} – ${dateVal}`);
-    // ✅ FIX #6 : \n au lieu de \\n
+    const sujet = encodeURIComponent(`[Signalement] ${typeLabel} – ${formationVal} – ${dateVal}`);
+    // ✅ FIX #2 : \n correct (pas \\n), et ouverture dans nouvel onglet via <a> pour éviter freeze
     const corps = encodeURIComponent(
 `Bonjour,
 
-Type de signalement : ${typesLabels[type]}
+Type de signalement : ${typeLabel}
 Date : ${dateVal}
 Créneau : ${creneauVal}
 Formation : ${formationVal}
@@ -355,6 +358,15 @@ ${message}
 Message envoyé depuis l'interface formateur Success Formation`
     );
 
-    window.location.href = `mailto:a.successformation@gmail.com?subject=${sujet}&body=${corps}`;
+    // ✅ FIX #2 : utilise un <a> temporaire avec target="_blank" au lieu de window.location.href
+    // évite le freeze sur Android Chrome
+    const mailLink = document.createElement('a');
+    mailLink.href = `mailto:pedagogie@successformation.re?subject=${sujet}&body=${corps}`;
+    mailLink.target = '_blank';
+    mailLink.rel = 'noopener';
+    document.body.appendChild(mailLink);
+    mailLink.click();
+    document.body.removeChild(mailLink);
+
     fermerModalSignalement();
 }
