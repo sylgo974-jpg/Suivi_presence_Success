@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Récapitulatif Mensuel – Success Formation</title>
-    /style.css">
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <style>
@@ -135,6 +135,9 @@
         }
         .nav-back:hover { opacity:.75; }
 
+        /* ── HIDDEN ────────────────────────────────────── */
+        .hidden { display:none !important; }
+
         @media(max-width:480px) {
             .stats-grid { grid-template-columns:repeat(2,1fr); }
             .form-row .form-group { min-width:100%; }
@@ -162,7 +165,7 @@
 
         <div class="form-row">
             <div class="form-group">
-                abel for="sel-apprenant">👤 Apprenant(e) *</label>
+                <label for="sel-apprenant">👤 Apprenant(e) *</label>
                 <select id="sel-apprenant">
                     <option value="">⏳ Chargement...</option>
                 </select>
@@ -171,7 +174,7 @@
 
         <div class="form-row" style="margin-top:12px;">
             <div class="form-group">
-                abel for="sel-mois">📅 Mois *</label>
+                <label for="sel-mois">📅 Mois *</label>
                 <select id="sel-mois">
                     <option value="1">Janvier</option>
                     <option value="2">Février</option>
@@ -188,7 +191,7 @@
                 </select>
             </div>
             <div class="form-group">
-                abel for="sel-annee">📆 Année *</label>
+                <label for="sel-annee">📆 Année *</label>
                 <input type="number" id="sel-annee" min="2024" max="2030" step="1" value="">
             </div>
         </div>
@@ -267,9 +270,6 @@
 
 </div><!-- /container -->
 
-<!-- ═══════════════════════════════════════════════════════════════════════
-     SCRIPT
-     ═══════════════════════════════════════════════════════════════════════ -->
 <script>
 const API = 'https://suivi-presence-success.vercel.app/api';
 
@@ -279,4 +279,299 @@ function hMatinDuree(f)    { return isAFCFormation(f) ? 4.0 : 3.5; }
 let donnees     = null;
 let retardsData = {};
 
-const MOIS_NOMS = 
+const MOIS_NOMS = [
+    '','Janvier','Février','Mars','Avril','Mai','Juin',
+    'Juillet','Août','Septembre','Octobre','Novembre','Décembre'
+];
+
+/* ── ALERTES ─────────────────────────────────────────── */
+function showAlert(msg, type='info') {
+    document.getElementById('alert-zone').innerHTML =
+        `<div class="alert alert-${type}">${msg}</div>`;
+}
+function clearAlert() { document.getElementById('alert-zone').innerHTML = ''; }
+
+/* ── CHARGEMENT DES APPRENANTS ───────────────────────── */
+async function chargerApprenants() {
+    try {
+        const r  = await fetch(`${API}/apprenants`);
+        const js = await r.json();
+        const sel = document.getElementById('sel-apprenant');
+        sel.innerHTML = '<option value="">-- Choisir un apprenant --</option>';
+        (js.apprenants || js).forEach(a => {
+            const opt = document.createElement('option');
+            opt.value = a._id || a.id;
+            opt.textContent = `${a.prenom || ''} ${a.nom || ''}`.trim();
+            sel.appendChild(opt);
+        });
+        const now = new Date();
+        document.getElementById('sel-annee').value = now.getFullYear();
+        document.getElementById('sel-mois').value  = now.getMonth() + 1;
+    } catch(e) {
+        showAlert('Impossible de charger la liste des apprenants : ' + e.message, 'error');
+    }
+}
+
+/* ── CHARGER LES DONNÉES DU MOIS ─────────────────────── */
+async function chargerDonnees() {
+    clearAlert();
+    const appId = document.getElementById('sel-apprenant').value;
+    const mois  = document.getElementById('sel-mois').value;
+    const annee = document.getElementById('sel-annee').value;
+
+    if (!appId) { showAlert('Veuillez sélectionner un apprenant.', 'error'); return; }
+    if (!mois || !annee) { showAlert('Veuillez sélectionner un mois et une année.', 'error'); return; }
+
+    const btn = document.getElementById('btn-charger');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Chargement...';
+
+    try {
+        const r  = await fetch(`${API}/presences?apprenant=${appId}&mois=${mois}&annee=${annee}`);
+        if (!r.ok) throw new Error('Réponse serveur : ' + r.status);
+        donnees = await r.json();
+
+        if (!donnees || !donnees.length) {
+            showAlert('Aucune donnée de présence trouvée pour cette période.', 'info');
+            ['stats-section','preview-section','retards-section','pdf-section']
+                .forEach(id => document.getElementById(id).classList.add('hidden'));
+            return;
+        }
+
+        retardsData = {};
+        afficherStats();
+        afficherApercu();
+        ['stats-section','preview-section','retards-section','pdf-section']
+            .forEach(id => document.getElementById(id).classList.remove('hidden'));
+        showAlert(`✅ ${donnees.length} enregistrement(s) chargé(s).`, 'success');
+    } catch(e) {
+        showAlert('Erreur lors du chargement : ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '🔍 Charger les données';
+    }
+}
+
+/* ── STATS ───────────────────────────────────────────── */
+function afficherStats() {
+    let joursPresents = 0, demiJours = 0, heuresTotal = 0;
+    donnees.forEach(j => {
+        const hasMatin = j.signatureMatin || j.sig_matin;
+        const hasAM    = j.signatureAM    || j.sig_am;
+        if (hasMatin || hasAM) joursPresents++;
+        if (hasMatin) demiJours++;
+        if (hasAM)    demiJours++;
+        heuresTotal += calcHeures(j);
+    });
+    document.getElementById('stat-jours-present').textContent = joursPresents;
+    document.getElementById('stat-demi-jour').textContent      = demiJours;
+    document.getElementById('stat-heures').textContent         = heuresTotal.toFixed(1) + 'h';
+}
+
+function calcHeures(j) {
+    const f      = j.formation || j.nomFormation || '';
+    const hMatin = hMatinDuree(f);
+    const hAM    = 3.5;
+    let h = 0;
+    if (j.signatureMatin || j.sig_matin) h += hMatin;
+    if (j.signatureAM    || j.sig_am)    h += hAM;
+    const dateStr = (j.date || '').slice(0,10);
+    if (retardsData[dateStr]) h -= retardsData[dateStr];
+    return Math.max(0, h);
+}
+
+/* ── APERÇU TABLE ────────────────────────────────────── */
+function afficherApercu() {
+    const tbody = document.getElementById('preview-tbody');
+    const tfoot = document.getElementById('preview-tfoot');
+    tbody.innerHTML = '';
+    let totalH = 0;
+
+    donnees.forEach(j => {
+        const dateStr  = (j.date || '').slice(0,10);
+        const [y,m,d]  = dateStr.split('-');
+        const dateAff  = d && m && y ? `${d}/${m}/${y}` : dateStr;
+        const f        = j.formation || j.nomFormation || '—';
+        const sigMatin = j.signatureMatin || j.sig_matin || null;
+        const sigAM    = j.signatureAM    || j.sig_am    || null;
+        const sigForm  = j.signatureFormateur || j.sig_formateur || null;
+        const formNom  = j.formateur || j.nomFormateur || '—';
+        const retard   = retardsData[dateStr] || 0;
+        const heures   = calcHeures(j);
+        totalH += heures;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${dateAff}</td>
+            <td style="text-align:left;max-width:160px;">${f}</td>
+            <td>${sigCell(sigMatin)}</td>
+            <td>${sigCell(sigAM)}</td>
+            <td>${sigCell(sigForm)}</td>
+            <td style="font-size:12px;">${formNom}</td>
+            <td>${retard ? '−'+retard+'h' : '—'}</td>
+            <td><strong>${heures.toFixed(1)}h</strong></td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    tfoot.innerHTML = `
+        <tr class="total-row">
+            <td colspan="7" style="text-align:right;padding-right:16px;">
+                🕐 Total heures du mois :
+            </td>
+            <td><strong>${totalH.toFixed(1)}h</strong></td>
+        </tr>`;
+}
+
+function sigCell(dataUrl) {
+    if (dataUrl) {
+        return `<div class="sig-cell">
+            <img src="${dataUrl}" alt="Signature">
+            <span class="sig-label">✓ Signé</span>
+        </div>`;
+    }
+    return '<span class="sig-absent-label">Absent</span>';
+}
+
+/* ── RETARDS ─────────────────────────────────────────── */
+let retardIdx = 0;
+function ajouterRetard() {
+    const id  = 'retard-' + retardIdx++;
+    const div = document.createElement('div');
+    div.className = 'retard-entry';
+    div.id = id;
+
+    const today = new Date().toISOString().slice(0,10);
+    div.innerHTML = `
+        <input type="date" id="${id}-date" value="${today}">
+        <select id="${id}-h">
+            <option value="1">1h</option>
+            <option value="2">2h</option>
+            <option value="3">3h</option>
+        </select>
+        <button class="btn-rm-retard" onclick="supprimerRetard('${id}')">✕</button>
+    `;
+    document.getElementById('retards-list').appendChild(div);
+
+    div.querySelector('input[type=date]').addEventListener('change', mettreAJourRetards);
+    div.querySelector('select').addEventListener('change', mettreAJourRetards);
+}
+
+function supprimerRetard(id) {
+    document.getElementById(id)?.remove();
+    mettreAJourRetards();
+}
+
+function mettreAJourRetards() {
+    retardsData = {};
+    document.querySelectorAll('.retard-entry').forEach(div => {
+        const dateVal = div.querySelector('input[type=date]')?.value;
+        const hVal    = parseFloat(div.querySelector('select')?.value || 0);
+        if (dateVal && hVal) retardsData[dateVal] = (retardsData[dateVal] || 0) + hVal;
+    });
+    afficherApercu();
+    afficherStats();
+}
+
+/* ── GÉNÉRATION PDF ──────────────────────────────────── */
+async function genererPDF() {
+    if (!donnees || !donnees.length) { showAlert('Aucune donnée à exporter.', 'error'); return; }
+
+    const btn = document.getElementById('btn-pdf');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Génération...';
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+
+        const moisVal  = parseInt(document.getElementById('sel-mois').value);
+        const annee    = document.getElementById('sel-annee').value;
+        const appSel   = document.getElementById('sel-apprenant');
+        const appNom   = appSel.options[appSel.selectedIndex]?.text || 'Apprenant';
+        const titre    = `Feuille d'émargement – ${appNom} – ${MOIS_NOMS[moisVal]} ${annee}`;
+
+        doc.setFontSize(14); doc.setFont('helvetica','bold');
+        doc.text('Success Formation', 14, 14);
+        doc.setFontSize(11); doc.setFont('helvetica','normal');
+        doc.text(titre, 14, 22);
+        doc.setDrawColor(206,42,69); doc.setLineWidth(0.5);
+        doc.line(14, 25, 283, 25);
+
+        const rows = [];
+        let totalH = 0;
+        donnees.forEach(j => {
+            const dateStr = (j.date || '').slice(0,10);
+            const [y,m,d] = dateStr.split('-');
+            const dateAff = d && m && y ? `${d}/${m}/${y}` : dateStr;
+            const f       = j.formation || j.nomFormation || '—';
+            const formNom = j.formateur  || j.nomFormateur || '—';
+            const retard  = retardsData[dateStr] || 0;
+            const heures  = calcHeures(j);
+            totalH += heures;
+
+            rows.push([
+                dateAff, f,
+                (j.signatureMatin || j.sig_matin) ? '✓' : '—',
+                (j.signatureAM    || j.sig_am)    ? '✓' : '—',
+                (j.signatureFormateur || j.sig_formateur) ? '✓' : '—',
+                formNom,
+                retard ? '−'+retard+'h' : '—',
+                heures.toFixed(1)+'h'
+            ]);
+        });
+        rows.push(['','','','','','','TOTAL', totalH.toFixed(1)+'h']);
+
+        doc.autoTable({
+            startY: 28,
+            head: [['Date','Formation','Sig. Matin','Sig. AM','Sig. Form.','Formateur','Retard','Heures']],
+            body: rows,
+            theme: 'grid',
+            headStyles: { fillColor:[206,42,69], textColor:255, fontStyle:'bold', halign:'center' },
+            bodyStyles: { fontSize:9, halign:'center' },
+            columnStyles: { 1:{halign:'left'}, 5:{halign:'left'} },
+            alternateRowStyles: { fillColor:[250,250,250] },
+            didParseCell: (data) => {
+                if (data.row.index === rows.length - 1) {
+                    data.cell.styles.fontStyle = 'bold';
+                    data.cell.styles.fillColor = [255,248,240];
+                }
+            }
+        });
+
+        let curY = doc.lastAutoTable.finalY + 8;
+        const sigPages = donnees.filter(j => j.signatureMatin || j.sig_matin || j.signatureAM || j.sig_am);
+        if (sigPages.length && curY < 180) {
+            doc.setFontSize(9); doc.setFont('helvetica','bold');
+            doc.text('Signatures originales :', 14, curY); curY += 6;
+            let x = 14;
+            for (const j of sigPages) {
+                const sig = j.signatureMatin || j.sig_matin || j.signatureAM || j.sig_am;
+                if (!sig) continue;
+                try {
+                    doc.addImage(sig, 'PNG', x, curY, 30, 12);
+                    const dateStr = (j.date || '').slice(0,10).split('-').reverse().join('/');
+                    doc.setFontSize(7); doc.setFont('helvetica','normal');
+                    doc.text(dateStr, x, curY + 14);
+                    x += 34;
+                    if (x > 250) { x = 14; curY += 20; }
+                } catch(_) { /* image invalide, ignorée */ }
+            }
+        }
+
+        const filename = `emargement_${appNom.replace(/\s+/g,'_')}_${MOIS_NOMS[moisVal]}_${annee}.pdf`;
+        doc.save(filename);
+        showAlert('✅ PDF généré avec succès : ' + filename, 'success');
+    } catch(e) {
+        showAlert('Erreur lors de la génération PDF : ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = "📄 Télécharger la feuille d'émargement PDF";
+    }
+}
+
+/* ── INIT ────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', chargerApprenants);
+</script>
+</body>
+</html>
