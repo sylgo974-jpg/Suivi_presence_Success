@@ -96,7 +96,8 @@ generateQRBtn.addEventListener('click', async () => {
         return;
     }
 
-    const jourSession = currentJour || 'AFC';
+const jourSession = currentJour || 'AFC';
+const isAFC = jourSession === 'AFC' || finalFormation.toUpperCase().trim().startsWith('AFC');
 const isAFC = jourSession === 'AFC' || finalFormation.toUpperCase().trim().startsWith('AFC');
 const slot = getCurrentSlot(isAFC);
     if (!slot) {
