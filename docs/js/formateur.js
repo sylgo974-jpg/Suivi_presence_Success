@@ -98,7 +98,6 @@ generateQRBtn.addEventListener('click', async () => {
 
 const jourSession = currentJour || 'AFC';
 const isAFC = jourSession === 'AFC' || finalFormation.toUpperCase().trim().startsWith('AFC');
-const isAFC = jourSession === 'AFC' || finalFormation.toUpperCase().trim().startsWith('AFC');
 const slot = getCurrentSlot(isAFC);
     if (!slot) {
         alert("Le pointage n'est disponible qu'aux horaires de formation");
