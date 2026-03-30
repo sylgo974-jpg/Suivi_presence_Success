@@ -1,240 +1,145 @@
-<script>
-const API = 'https://suivi-presence-success.vercel.app/api';
-
-function isAFCFormation(f) { return (f||'').toUpperCase().trim().startsWith('AFC'); }
-function hMatinDuree(f)    { return isAFCFormation(f) ? 4.0 : 3.5; }
-
-let donnees     = null;
-let retardsData = {};
-
-const MOIS_NOMS = ['','Janvier','Février','Mars','Avril','Mai','Juin',
-                   'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-
-// ✅ UN SEUL DOMContentLoaded — point d'entrée unique
-window.addEventListener('DOMContentLoaded', async () => {
-    const now = new Date();
-    document.getElementById('sel-mois').value  = now.getMonth() + 1;
-    document.getElementById('sel-annee').value = now.getFullYear();
-    await chargerApprenants();
-});
-
-// ── Chargement apprenants ─────────────────────────────────────────────────
-async function chargerApprenants() {
-    const sel = document.getElementById('sel-apprenant');
-    if (!sel) { console.error('❌ #sel-apprenant introuvable'); return; }
-    sel.innerHTML = '<option value="">⏳ Chargement...</option>';
-    try {
-        const resp = await fetch(`${API}/rapport/apprenants`);
-        console.log('📡 Status apprenants:', resp.status);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-
-        const raw   = await resp.json();
-        // Gère tableau direct OU objet enveloppé
-        const liste = Array.isArray(raw) ? raw : (raw.apprenants || raw.data || []);
-        console.log(`✅ ${liste.length} apprenants reçus`);
-
-        if (liste.length === 0) throw new Error('Liste vide reçue');
-
-        sel.innerHTML = '<option value="">-- Sélectionner un(e) apprenant(e) --</option>';
-        liste
-            .slice()
-            .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }))
-            .forEach(nom => {
-                const opt       = document.createElement('option');
-                opt.value       = nom;
-                opt.textContent = nom;
-                sel.appendChild(opt);
-            });
-
-    } catch (e) {
-        console.error('❌ chargerApprenants:', e);
-        sel.innerHTML = '<option value="">⚠️ Erreur — rechargez la page</option>';
-        showAlert('error', `Impossible de charger les apprenants : ${e.message}`);
-    }
-}
-
-// ── Chargement données ────────────────────────────────────────────────────
-async function chargerDonnees() {
-    const nomComplet = document.getElementById('sel-apprenant').value;
-    const mois       = document.getElementById('sel-mois').value;
-    const annee      = document.getElementById('sel-annee').value;
-
-    if (!nomComplet) { showAlert('error', 'Veuillez sélectionner un(e) apprenant(e).'); return; }
-    if (!mois || !annee) { showAlert('error', "Veuillez sélectionner le mois et l'année."); return; }
-
-    const btn = document.getElementById('btn-charger');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> Chargement...';
-    clearAlert();
-
-    try {
-        const url  = `${API}/rapport/mensuel?nomComplet=${encodeURIComponent(nomComplet)}&mois=${mois}&annee=${annee}`;
-        const resp = await fetch(url);
-        if (!resp.ok) {
-            const err = await resp.json().catch(() => ({}));
-            throw new Error(err.error || `Erreur HTTP ${resp.status}`);
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Récapitulatif Mensuel – Success Formation</title>
+    /style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        :root {
+            --sf-bg:#f1d7bc; --sf-border:#ce2a45; --sf-orange:#fc772c;
+            --sf-slate:#5c646b; --sf-white:#ffffff; --sf-success:#2d9e6b;
         }
-        donnees = await resp.json();
-
-        if (!donnees.attendances || donnees.attendances.length === 0) {
-            showAlert('info', `Aucune présence pour ${nomComplet} en ${MOIS_NOMS[+mois]} ${annee}.`);
-            ['stats-section','preview-section','retards-section','pdf-section']
-                .forEach(id => document.getElementById(id).classList.add('hidden'));
-        } else {
-            retardsData = {};
-            afficherApercu();
-            showAlert('success', `${donnees.attendances.length} jour(s) chargés pour ${nomComplet}.`);
+        .form-row { display:flex; gap:12px; flex-wrap:wrap; }
+        .form-row .form-group { flex:1; min-width:160px; }
+        select, input[type="number"], input[type="date"] {
+            width:100%; padding:12px 14px; border:2px solid #e0e0e0;
+            border-radius:10px; font-size:15px; background:#fff; box-sizing:border-box;
         }
-    } catch (e) {
-        console.error(e);
-        showAlert('error', `Erreur : ${e.message}`);
-    } finally {
-        btn.disabled  = false;
-        btn.innerHTML = '🔍 Charger les données';
-    }
-}
+        select:focus, input:focus { border-color:var(--sf-border); outline:none; }
+        label { display:block; font-weight:600; color:var(--sf-slate); font-size:.88rem; margin-bottom:6px; }
 
-// ── Aperçu avec signatures ────────────────────────────────────────────────
-function afficherApercu() {
-    if (!donnees) return;
-    const tbody = document.getElementById('preview-tbody');
-    const tfoot = document.getElementById('preview-tfoot');
-    let totalHeures = 0, totalDemiJ = 0;
-    const joursPresent = new Set();
-    tbody.innerHTML = '';
+        .btn-load {
+            width:100%; padding:14px; margin-top:14px;
+            background:linear-gradient(135deg, var(--sf-border) 0%, var(--sf-orange) 100%);
+            color:#fff; border:none; border-radius:12px;
+            font-size:1rem; font-weight:700; cursor:pointer;
+            display:flex; align-items:center; justify-content:center; gap:8px;
+        }
+        .btn-load:disabled { background:#cbd5e0; cursor:not-allowed; }
+        .btn-load:hover:not(:disabled) { opacity:.9; }
 
-    donnees.attendances.forEach(day => {
-        const formation       = day.matin?.formation       || day.apresMidi?.formation       || '—';
-        const formateurNom    = day.matin?.formateurNom    || day.apresMidi?.formateurNom    || '';
-        const formateurPrenom = day.matin?.formateurPrenom || day.apresMidi?.formateurPrenom || '';
-        const retard          = retardsData[day.date] || 0;
-        const hMatin          = day.matin     ? hMatinDuree(formation) : 0;
-        const hAM             = day.apresMidi ? 3.5 : 0;
-        const hJour           = Math.max(0, hMatin + hAM - retard);
-        totalHeures += hJour;
-        if (day.matin)              totalDemiJ++;
-        if (day.apresMidi)          totalDemiJ++;
-        if (day.matin||day.apresMidi) joursPresent.add(day.date);
+        .btn-pdf {
+            width:100%; padding:16px; margin-top:8px;
+            background:linear-gradient(135deg, #1a7e4f 0%, var(--sf-success) 100%);
+            color:#fff; border:none; border-radius:12px;
+            font-size:1.05rem; font-weight:700; cursor:pointer;
+            display:flex; align-items:center; justify-content:center; gap:8px;
+        }
+        .btn-pdf:disabled { background:#cbd5e0; cursor:not-allowed; }
+        .btn-pdf:hover:not(:disabled) { opacity:.92; }
 
-        // Signatures — tous les noms de champs possibles selon version API
-        const sigMatinApp = day.matin?.signatureApprenant     || null;
-        const sigAMApp    = day.apresMidi?.signatureApprenant || null;
-        const sigForm     = day.matin?.signatureFormateur            ||
-                            day.matin?.signatureFormateurMatin       ||
-                            day.apresMidi?.signatureFormateur        ||
-                            day.apresMidi?.signatureFormateurApresMidi || null;
-
-        function cellSig(data, label) {
-            if (data && data.startsWith('data:image')) {
-                return `<div class="sig-cell">
-                    <img src="${data}" alt="sig ${label}">
-                    <span class="sig-label">✅ Signé</span>
-                </div>`;
-            }
-            return `<span class="sig-absent-label">✗ Absent(e)</span>`;
+        /* ── TABLE PREVIEW ─────────────────────────────── */
+        .preview-table-wrap { overflow-x:auto; margin-top:8px; }
+        table.preview { width:100%; border-collapse:collapse; font-size:13px; }
+        table.preview th {
+            background:var(--sf-border); color:#fff;
+            padding:8px 10px; text-align:center; white-space:nowrap;
+        }
+        table.preview td {
+            padding:6px 8px; border-bottom:1px solid #eee;
+            text-align:center; vertical-align:middle;
+        }
+        table.preview tr:nth-child(even) td { background:#fafafa; }
+        .total-row td {
+            font-weight:700; background:#fff8f0 !important;
+            border-top:3px solid var(--sf-orange);
         }
 
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td><strong>${formatDateFr(day.date)}</strong></td>
-            <td style="font-size:12px;">${formation}</td>
-            <td>${cellSig(sigMatinApp, 'matin')}</td>
-            <td>${cellSig(sigAMApp,    'après-midi')}</td>
-            <td>${cellSig(sigForm,     'formateur')}</td>
-            <td style="font-size:12px;">${formateurPrenom} ${formateurNom}</td>
-            <td id="retard-preview-${day.date}">${retard > 0 ? `-${retard}h` : '—'}</td>
-            <td><strong>${formatHeures(hJour)}</strong></td>`;
-        tbody.appendChild(tr);
-    });
+        /* ── SIGNATURES PREVIEW ────────────────────────── */
+        .sig-cell {
+            display:flex; flex-direction:column;
+            align-items:center; gap:3px; min-width:80px;
+        }
+        .sig-cell img {
+            max-width:110px; max-height:44px;
+            border:1px solid #e0e0e0; border-radius:4px;
+            background:#fff; padding:2px; object-fit:contain;
+        }
+        .sig-cell .sig-label { font-size:10px; color:#27ae60; font-weight:600; }
+        .sig-absent-label    { font-size:11px; color:#e74c3c; font-style:italic; }
 
-    tfoot.innerHTML = `<tr class="total-row">
-        <td colspan="5" style="text-align:right;padding-right:16px;">
-            <strong>TOTAL PÉRIODE</strong>
-        </td>
-        <td>—</td>
-        <td id="total-heures-preview">
-            <strong>${formatHeures(totalHeures)}</strong>
-        </td>
-    </tr>`;
+        /* ── STATS ─────────────────────────────────────── */
+        .stats-grid {
+            display:grid; grid-template-columns:repeat(3,1fr);
+            gap:10px; margin-bottom:16px;
+        }
+        .stat-card {
+            background:#fdfaf7; border:2px solid var(--sf-bg);
+            border-radius:10px; padding:12px; text-align:center;
+        }
+        .stat-card .val { font-size:1.5rem; font-weight:700; color:var(--sf-border); }
+        .stat-card .lbl { font-size:.8rem; color:var(--sf-slate); }
 
-    document.getElementById('stat-jours-present').textContent = joursPresent.size;
-    document.getElementById('stat-demi-jour').textContent     = totalDemiJ;
-    document.getElementById('stat-heures').textContent        = formatHeures(totalHeures);
+        /* ── RETARDS ───────────────────────────────────── */
+        .retard-entry {
+            display:flex; gap:8px; align-items:center;
+            margin-bottom:8px; flex-wrap:wrap;
+        }
+        .retard-entry input[type="date"] { flex:1; min-width:140px; }
+        .retard-entry select             { flex:0 0 100px; }
+        .btn-rm-retard {
+            background:none; border:2px solid var(--sf-border);
+            color:var(--sf-border); border-radius:8px;
+            padding:6px 12px; cursor:pointer;
+            font-weight:700; font-size:16px; line-height:1;
+        }
+        .btn-add-retard {
+            background:#fff0f2; border:2px dashed var(--sf-border);
+            color:var(--sf-border); border-radius:8px; padding:10px 16px;
+            cursor:pointer; font-weight:600; font-size:14px;
+            display:flex; align-items:center; gap:6px; margin-top:4px;
+        }
 
-    ['stats-section','preview-section','retards-section','pdf-section']
-        .forEach(id => document.getElementById(id).classList.remove('hidden'));
-}
+        /* ── DIVERS ────────────────────────────────────── */
+        .spinner {
+            display:inline-block; width:18px; height:18px;
+            border:3px solid rgba(255,255,255,.4); border-radius:50%;
+            border-top-color:#fff; animation:spin .7s linear infinite;
+        }
+        @keyframes spin { to { transform:rotate(360deg); } }
 
-// ── Retards ───────────────────────────────────────────────────────────────
-function ajouterRetard() {
-    const id  = Date.now();
-    const div = document.createElement('div');
-    div.className = 'retard-entry';
-    div.id = `re-${id}`;
-    div.innerHTML = `
-        <input type="date" onchange="majRetard()" id="rd-date-${id}">
-        <select onchange="majRetard()" id="rd-h-${id}">
-            <option value="1">— 1h</option>
-            <option value="2">— 2h</option>
-            <option value="3">— 3h</option>
-        </select>
-        <button class="btn-rm-retard"
-            onclick="document.getElementById('re-${id}').remove();majRetard();">×</button>`;
-    document.getElementById('retards-list').appendChild(div);
-}
+        .alert {
+            padding:12px 16px; border-radius:10px;
+            margin-bottom:12px; font-size:14px;
+            display:flex; align-items:center; gap:8px;
+        }
+        .alert-info    { background:#e8f4fd; border-left:4px solid #3498db; color:#1a5c8a; }
+        .alert-success { background:#eafaf1; border-left:4px solid var(--sf-success); color:#1a6040; }
+        .alert-error   { background:#fdf0f0; border-left:4px solid var(--sf-border);  color:#7a1020; }
 
-function majRetard() {
-    retardsData = {};
-    document.querySelectorAll('.retard-entry').forEach(div => {
-        const id     = div.id.replace('re-','');
-        const dateEl = document.getElementById(`rd-date-${id}`);
-        const hEl    = document.getElementById(`rd-h-${id}`);
-        if (dateEl?.value)
-            retardsData[dateEl.value] = (retardsData[dateEl.value]||0) + parseInt(hEl.value);
-    });
-    if (!donnees) return;
-    let totalHeures = 0;
-    donnees.attendances.forEach(day => {
-        const fm     = day.matin?.formation || day.apresMidi?.formation || '';
-        const retard = retardsData[day.date] || 0;
-        const h      = Math.max(0,(day.matin?hMatinDuree(fm):0)+(day.apresMidi?3.5:0)-retard);
-        totalHeures += h;
-        const cell = document.getElementById(`retard-preview-${day.date}`);
-        if (cell) cell.textContent = retard > 0 ? `-${retard}h` : '—';
-    });
-    const totalEl = document.getElementById('total-heures-preview');
-    if (totalEl) totalEl.innerHTML = `<strong>${formatHeures(totalHeures)}</strong>`;
-    document.getElementById('stat-heures').textContent = formatHeures(totalHeures);
-}
+        header .logo {
+            display:flex; align-items:center; gap:12px;
+            justify-content:center; margin-bottom:8px;
+        }
+        header .logo img  { max-width:120px; }
+        header .logo span { font-size:1.3rem; font-weight:700; color:var(--sf-border); }
+        header h1         { color:var(--sf-border); font-size:1.4rem; }
 
-// ── Génération PDF ────────────────────────────────────────────────────────
-async function genererPDF() {
-    if (!donnees) return;
-    const btn = document.getElementById('btn-pdf');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> Génération en cours...';
+        .nav-back {
+            display:inline-flex; align-items:center; gap:6px;
+            color:var(--sf-border); text-decoration:none;
+            font-weight:600; margin-bottom:12px; font-size:14px;
+        }
+        .nav-back:hover { opacity:.75; }
 
-    try {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
-        const nomComplet = document.getElementById('sel-apprenant').value;
-        const mois       = parseInt(document.getElementById('sel-mois').value);
-        const annee      = parseInt(document.getElementById('sel-annee').value);
-        const pageW      = doc.internal.pageSize.getWidth();
-        const pageH      = doc.internal.pageSize.getHeight();
-        const marg       = 10;
-
-        // Logo
-        let logoB64 = null;
-        try { logoB64 = await chargerImageBase64('img/Logo%20success%20Formation%20rec.PNG'); } catch(_) {}
-        if (logoB64) doc.addImage(logoB64, 'PNG', marg, 6, 28, 14);
-
-        // En-tête
-        doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(206,42,69);
-        doc.text("FEUILLE D'EMARGEMENT MENSUELLE", pageW/2, 12, { align:'center' });
-        doc.setFontSize(11); doc.setTextColor(92,100,107);
-        doc.text(`Periode : ${MOIS_NOMS[mois]} ${annee}`, pageW/2, 19, { align:'center' });
-        doc.setFontSize(11); doc.
+        @media(max-width:480px) {
+            .stats-grid { grid-template-columns:repeat(2,1fr); }
+            .form-row .form-group { min-width:100%; }
+        }
+    </style>
 </head>
 <body>
 <div class="container">
@@ -250,7 +155,7 @@ async function genererPDF() {
         <p class="subtitle">Génération des feuilles de présence PDF</p>
     </header>
 
-    <!-- ═══ PARAMÈTRES ══════════════════════════════════════════════════════ -->
+    <!-- ═══ PARAMÈTRES ══════════════════════════════════════════════════ -->
     <div class="card">
         <h2>⚙️ Paramètres du rapport</h2>
         <div id="alert-zone"></div>
@@ -293,7 +198,7 @@ async function genererPDF() {
         </button>
     </div>
 
-    <!-- ═══ STATS ══════════════════════════════════════════════════════════ -->
+    <!-- ═══ STATS ══════════════════════════════════════════════════════ -->
     <div class="card hidden" id="stats-section">
         <h2>📊 Résumé</h2>
         <div class="stats-grid">
@@ -312,14 +217,14 @@ async function genererPDF() {
         </div>
     </div>
 
-    <!-- ═══ APERÇU AVEC SIGNATURES ════════════════════════════════════════ -->
+    <!-- ═══ APERÇU AVEC SIGNATURES ════════════════════════════════════ -->
     <div class="card hidden" id="preview-section">
         <h2>📄 Aperçu du récapitulatif</h2>
         <p style="font-size:13px;color:#666;margin-bottom:10px;">
             Les signatures sont affichées ci-dessous et seront intégrées dans le PDF final.
         </p>
         <div class="preview-table-wrap">
-            <table class="preview" id="preview-table">
+            <table class="preview">
                 <thead>
                     <tr>
                         <th>Date</th>
@@ -338,7 +243,7 @@ async function genererPDF() {
         </div>
     </div>
 
-    <!-- ═══ RETARDS ════════════════════════════════════════════════════════ -->
+    <!-- ═══ RETARDS ════════════════════════════════════════════════════ -->
     <div class="card hidden" id="retards-section">
         <h2>⏰ Retards (optionnel)</h2>
         <p style="font-size:13px;color:#666;margin-bottom:14px;">
@@ -348,7 +253,7 @@ async function genererPDF() {
         <button class="btn-add-retard" onclick="ajouterRetard()">➕ Ajouter un retard</button>
     </div>
 
-    <!-- ═══ PDF ════════════════════════════════════════════════════════════ -->
+    <!-- ═══ PDF ════════════════════════════════════════════════════════ -->
     <div class="card hidden" id="pdf-section">
         <h2>📥 Générer le PDF</h2>
         <div class="alert alert-info">
@@ -362,10 +267,10 @@ async function genererPDF() {
 
 </div><!-- /container -->
 
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SCRIPT
+     ═══════════════════════════════════════════════════════════════════════ -->
 <script>
-// ═══════════════════════════════════════════════════════════════════════════
-// CONFIG
-// ═══════════════════════════════════════════════════════════════════════════
 const API = 'https://suivi-presence-success.vercel.app/api';
 
 function isAFCFormation(f) { return (f || '').toUpperCase().trim().startsWith('AFC'); }
