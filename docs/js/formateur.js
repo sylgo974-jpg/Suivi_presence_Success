@@ -37,7 +37,8 @@ function updateDateTime() {
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     currentDateEl.textContent = now.toLocaleDateString('fr-FR', options);
 
-    const slot = getCurrentSlot();
+   const isAFC = currentJour === 'AFC';
+const slot  = getCurrentSlot(isAFC);
     if (slot) {
         currentSlotEl.textContent  = slot.label;
         currentSlotEl.style.color  = 'var(--sf-success)';
@@ -47,13 +48,19 @@ function updateDateTime() {
     }
 }
 
-function getCurrentSlot() {
+// Après — AFC : 8h00 au lieu de 8h30
+function getCurrentSlot(isAFC = false) {
     const now  = new Date();
     const day  = now.getDay();
     const time = now.getHours() * 60 + now.getMinutes();
     if (day === 0 || day === 6) return null;
-    if (time >= 510 && time <= 735) return { id: 'matin',     label: 'Matin (8h30 - 12h00)' };
-    if (time >= 780 && time <= 1005) return { id: 'apres-midi', label: 'Après-midi (13h00 - 16h30)' };
+    if (isAFC) {
+        if (time >= 480 && time <= 720)  return { id: 'matin',     label: 'Matin (8h00 - 12h00)' };
+        if (time >= 780 && time <= 1005) return { id: 'apres-midi', label: 'Après-midi (13h00 - 16h30)' };
+    } else {
+        if (time >= 510 && time <= 735)  return { id: 'matin',     label: 'Matin (8h30 - 12h00)' };
+        if (time >= 780 && time <= 1005) return { id: 'apres-midi', label: 'Après-midi (13h00 - 16h30)' };
+    }
     return null;
 }
 
@@ -89,13 +96,14 @@ generateQRBtn.addEventListener('click', async () => {
         return;
     }
 
-    const slot = getCurrentSlot();
+    const jourSession = currentJour || 'AFC';
+const isAFC = jourSession === 'AFC' || finalFormation.toUpperCase().trim().startsWith('AFC');
+const slot = getCurrentSlot(isAFC);
     if (!slot) {
         alert("Le pointage n'est disponible qu'aux horaires de formation");
         return;
     }
 
-    const jourSession = currentJour || 'AFC';
 
     // ── Récupérer les signatures déjà enregistrées ────────────────────────────
     const sigMatin    = window.getSignatureFormateur ? window.getSignatureFormateur('matin')     : null;
