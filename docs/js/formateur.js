@@ -361,7 +361,7 @@ Message envoyé depuis l'interface formateur Success Formation`
     // ✅ FIX #2 : utilise un <a> temporaire avec target="_blank" au lieu de window.location.href
     // évite le freeze sur Android Chrome
     const mailLink = document.createElement('a');
-    mailLink.href = `mailto:pedagogie@successformation.re?subject=${sujet}&body=${corps}`;
+    mailLink.href = `mailto:a.successformation@gmail.com?subject=${sujet}&body=${corps}`;
     mailLink.target = '_blank';
     mailLink.rel = 'noopener';
     document.body.appendChild(mailLink);
