@@ -1,1 +1,686 @@
-PLACEHOLDER_INDEX_HTML
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Interface Formateur - Success Formation</title>
+    <link rel="apple-touch-icon" href="img/Logo success Formation rec.PNG">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .form-group select, .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+            appearance: auto;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+        .form-group input { cursor: text; margin-top: 8px; }
+        .form-group select:focus, .form-group input:focus { border-color: #ce2a45; outline: none; }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 14px; height: 14px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #ce2a45;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+
+        .apprenants-preview {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-top: 8px;
+            font-size: 13px;
+            color: #555;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .apprenant-item { padding: 4px 0; border-bottom: 1px solid #eee; }
+        .apprenant-item:last-child { border-bottom: none; }
+        .badge-count {
+            display: inline-block;
+            background: #ce2a45; color: white;
+            border-radius: 12px; padding: 2px 8px;
+            font-size: 12px; font-weight: bold; margin-left: 6px;
+        }
+        optgroup { font-weight: bold; color: #333; }
+
+        .info-jour {
+            background: #eaf4ff;
+            border-left: 4px solid #ce2a45;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 12px;
+            color: #333;
+        }
+
+        /* === SUIVI PRÉSENCES === */
+        .attendance-header { padding: 10px 0 14px; }
+        .attendance-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; font-size: 14px; }
+        .stat-present { color: #27ae60; font-weight: 600; }
+        .stat-absent  { color: #e74c3c; font-weight: 600; }
+        .stat-total   { color: #555; }
+        .progress-bar-container { background: #f0f0f0; border-radius: 20px; height: 10px; overflow: hidden; margin-bottom: 4px; }
+        .progress-bar { height: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71); border-radius: 20px; transition: width 0.6s ease; }
+        .progress-label { font-size: 12px; color: #888; text-align: right; }
+        .attendance-group { margin-top: 14px; }
+        .group-title { font-weight: 700; font-size: 13px; padding: 6px 10px; border-radius: 6px; margin-bottom: 6px; }
+        .present-title { background: #eafaf1; color: #27ae60; border-left: 4px solid #27ae60; }
+        .absent-title  { background: #fdf3f3; color: #e74c3c; border-left: 4px solid #e74c3c; }
+        .attendance-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 10px; border-radius: 6px; margin-bottom: 4px;
+            font-size: 14px; transition: background 0.3s;
+        }
+        .attendance-item.present { background: #f0faf4; border-left: 3px solid #27ae60; }
+        .attendance-item.absent  { background: #fdf8f8; border-left: 3px solid #e0e0e0; color: #999; }
+        .att-nom    { font-weight: 500; }
+        .att-heure  { font-size: 12px; color: #27ae60; font-weight: 600; white-space: nowrap; }
+        .att-statut { font-size: 12px; color: #bbb; font-style: italic; }
+
+        /* === SIGNALEMENT PÉDAGOGIQUE === */
+        .btn-signalement {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white; border: none; padding: 14px 20px;
+            border-radius: 10px; font-size: 16px; font-weight: 600;
+            cursor: pointer; width: 100%;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: opacity 0.2s;
+        }
+        .btn-signalement:hover { opacity: 0.88; }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.55); z-index: 1000;
+            display: none; justify-content: center; align-items: center;
+            padding: 16px; box-sizing: border-box;
+        }
+        .modal-box {
+            background: white; border-radius: 14px; padding: 24px;
+            max-width: 480px; width: 100%;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+            max-height: 90vh; overflow-y: auto;
+        }
+        .modal-box h3 { margin-top: 0; color: #ce2a45; font-size: 18px; }
+        .modal-box .form-group { margin-bottom: 14px; }
+        .modal-box label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 14px; color: #444; }
+        .modal-box select, .modal-box textarea {
+            width: 100%; padding: 10px 12px;
+            border: 2px solid #e0e0e0; border-radius: 8px;
+            font-size: 15px; box-sizing: border-box; font-family: inherit;
+        }
+        .modal-box select:focus, .modal-box textarea:focus { border-color: #ce2a45; outline: none; }
+        .modal-box textarea { resize: vertical; min-height: 90px; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+        .btn-annuler {
+            padding: 10px 20px; border: 2px solid #ccc; border-radius: 8px;
+            background: white; cursor: pointer; font-size: 15px; font-weight: 500;
+        }
+        .btn-envoyer {
+            padding: 10px 22px; background: #ce2a45; color: white;
+            border: none; border-radius: 8px; cursor: pointer;
+            font-size: 15px; font-weight: 700;
+        }
+        .btn-envoyer:hover { background: #a8223a; }
+
+        /* === SIGNATURE FORMATEUR === */
+        .signature-formateur-section { margin-top: 20px; margin-bottom: 10px; }
+        .signature-formateur-section h3 { font-size: 15px; font-weight: 700; color: #333; margin-bottom: 10px; }
+        .signature-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+        .sig-tab-btn {
+            flex: 1; padding: 10px 8px; border: 2px solid #e0e0e0;
+            border-radius: 8px; background: #f8f9fa;
+            font-size: 14px; font-weight: 600; cursor: pointer;
+            transition: all 0.2s; color: #555; text-align: center;
+        }
+        .sig-tab-btn.active { border-color: #ce2a45; background: #fff0f2; color: #ce2a45; }
+        .sig-tab-btn.signed { border-color: #27ae60; background: #eafaf1; color: #27ae60; }
+        .sig-canvas-wrap {
+            position: relative; border: 2px dashed #ccc; border-radius: 10px;
+            background: #fafafa; overflow: hidden; touch-action: none;
+        }
+        .sig-canvas-wrap canvas { display: block; width: 100%; cursor: crosshair; }
+        .sig-canvas-placeholder {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: #bbb; font-size: 13px; pointer-events: none; white-space: nowrap;
+        }
+        .sig-actions { display: flex; gap: 8px; margin-top: 8px; }
+        .btn-sig-clear {
+            flex: 1; padding: 9px; border: 2px solid #e0e0e0; border-radius: 8px;
+            background: white; font-size: 14px; cursor: pointer; color: #666;
+        }
+        .btn-sig-save {
+            flex: 2; padding: 9px; border: none; border-radius: 8px;
+            background: #ce2a45; color: white; font-size: 14px; font-weight: 700; cursor: pointer;
+        }
+        .btn-sig-save:hover { background: #a8223a; }
+        .sig-saved-preview { display: none; margin-top: 10px; text-align: center; }
+        .sig-saved-preview img {
+            max-width: 100%; border: 1px solid #e0e0e0;
+            border-radius: 8px; padding: 6px; background: white;
+        }
+        .sig-saved-label { font-size: 12px; color: #27ae60; font-weight: 600; margin-bottom: 4px; }
+        .sig-redo-btn {
+            margin-top: 6px; font-size: 12px; color: #ce2a45;
+            background: none; border: none; cursor: pointer; text-decoration: underline;
+        }
+
+        /* === LIEN RAPPORT === */
+        .rapport-link-card {
+            text-align: center; padding: 18px 22px;
+        }
+        .rapport-link-card a {
+            color: var(--sf-border); font-weight: 700; text-decoration: none;
+            font-size: 1rem; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .rapport-link-card a:hover { opacity: 0.75; }
+        .rapport-link-card p { font-size: 12px; color: #888; margin-top: 6px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div class="logo">
+            <img src="img/Logo%20success%20Formation%20rec.PNG" alt="Success Formation">
+            <span>Success Formation</span>
+        </div>
+        <h1>Interface d'émargement</h1>
+        <p class="subtitle">Espace Formateur</p>
+    </header>
+
+    <main>
+        <!-- ═══ CARTE INFORMATIONS SESSION ═══════════════════════════════════ -->
+        <div class="card">
+            <h2><span class="icon">📝</span> Informations Session</h2>
+
+            <div id="info-jour" class="info-jour">📅 Chargement du jour...</div>
+
+            <div class="form-group">
+                <label for="session-select">🏫 Session du jour *</label>
+                <select id="session-select" required>
+                    <option value="">⏳ Chargement des sessions...</option>
+                </select>
+                <div id="manual-session-group" style="display:none;">
+                    <input type="text" id="manual-formation" placeholder="Nom de la formation (ex: AMUM AFC)">
+                </div>
+            </div>
+
+            <div id="formateur-section" style="display:none;">
+                <div class="form-group">
+                    <label for="formateur-select">👨‍🏫 Formateur *</label>
+                    <select id="formateur-select" required>
+                        <option value="">-- Sélectionner votre nom --</option>
+                    </select>
+                    <div id="manual-formateur-group" style="display:none;">
+                        <input type="text" id="manual-formateur-nom" placeholder="Votre Nom et Prénom">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Champs cachés -->
+            <input type="hidden" id="formateur-nom">
+            <input type="hidden" id="formateur-prenom">
+            <input type="hidden" id="formation">
+
+            <div id="apprenants-section" style="display:none;">
+                <h3>👥 Apprenants attendus <span id="apprenants-count" class="badge-count">0</span></h3>
+                <div id="apprenants-list" class="apprenants-preview">
+                    <em>Sélectionnez une session pour voir les apprenants</em>
+                </div>
+            </div>
+
+            <div class="session-info-details">
+                <p><strong>📅 Date :</strong> <span id="current-date"></span></p>
+                <p><strong>🕒 Créneau :</strong> <span id="current-slot">Chargement...</span></p>
+            </div>
+
+            <!-- ════ SIGNATURE FORMATEUR ════════════════════════════════════ -->
+            <div class="signature-formateur-section" id="signature-formateur-section">
+                <h3>✍️ Signature du formateur</h3>
+                <p style="font-size:13px;color:#666;margin-bottom:10px;">
+                    Signez une fois par créneau au moment de la création de la session.
+                </p>
+
+                <div class="signature-tabs">
+                    <button class="sig-tab-btn active" id="tab-matin"      onclick="switchSigTab('matin')">🌅 Matin</button>
+                    <button class="sig-tab-btn"        id="tab-apres-midi" onclick="switchSigTab('apres-midi')">🌇 Après-midi</button>
+                </div>
+
+                <!-- Canvas Matin -->
+                <div id="sig-panel-matin">
+                    <div class="sig-canvas-wrap">
+                        <canvas id="sig-canvas-matin" height="120"></canvas>
+                        <span class="sig-canvas-placeholder" id="placeholder-matin">✍️ Signez ici (matin)</span>
+                    </div>
+                    <div class="sig-actions">
+                        <button class="btn-sig-clear" onclick="clearCanvas('matin')">🗑️ Effacer</button>
+                        <button class="btn-sig-save"  onclick="sauvegarderSignature('matin')">✅ Valider signature matin</button>
+                    </div>
+                    <div class="sig-saved-preview" id="preview-matin">
+                        <div class="sig-saved-label">✅ Signature matin enregistrée</div>
+                        <img id="preview-img-matin" src="" alt="Signature matin">
+                        <br><button class="sig-redo-btn" onclick="refaireSignature('matin')">Refaire la signature</button>
+                    </div>
+                </div>
+
+                <!-- Canvas Après-midi -->
+                <div id="sig-panel-apres-midi" style="display:none;">
+                    <div class="sig-canvas-wrap">
+                        <canvas id="sig-canvas-apres-midi" height="120"></canvas>
+                        <span class="sig-canvas-placeholder" id="placeholder-apres-midi">✍️ Signez ici (après-midi)</span>
+                    </div>
+                    <div class="sig-actions">
+                        <button class="btn-sig-clear" onclick="clearCanvas('apres-midi')">🗑️ Effacer</button>
+                        <button class="btn-sig-save"  onclick="sauvegarderSignature('apres-midi')">✅ Valider signature après-midi</button>
+                    </div>
+                    <div class="sig-saved-preview" id="preview-apres-midi">
+                        <div class="sig-saved-label">✅ Signature après-midi enregistrée</div>
+                        <img id="preview-img-apres-midi" src="" alt="Signature après-midi">
+                        <br><button class="sig-redo-btn" onclick="refaireSignature('apres-midi')">Refaire la signature</button>
+                    </div>
+                </div>
+            </div>
+            <!-- ════ FIN SIGNATURE ══════════════════════════════════════════ -->
+
+            <button id="generate-qr" class="btn btn-primary" disabled>
+                <span class="icon">🔗</span> Générer QR Code
+            </button>
+        </div>
+
+        <!-- ═══ QR CODE ══════════════════════════════════════════════════════ -->
+        <div class="card hidden" id="qr-section">
+            <h2><span class="icon">📱</span> QR Code de Pointage</h2>
+            <p>Faites scanner ce code aux apprenants pour qu'ils puissent émarger.</p>
+            <div id="qrcode-container" class="qrcode"></div>
+            <div id="qr-validity" class="qr-validity"></div>
+            <button id="download-qr" class="btn btn-secondary">
+                <span class="icon">💾</span> Télécharger l'image
+            </button>
+        </div>
+
+        <!-- ═══ SUIVI PRÉSENCES ═══════════════════════════════════════════════ -->
+        <div class="card hidden" id="attendance-section">
+            <h2>
+                <span class="icon">👥</span> Suivi des présences
+                <span id="refresh-badge" style="font-size:12px;color:#888;font-weight:normal;">🔄 auto 10s</span>
+            </h2>
+            <p class="info-text">Mis à jour automatiquement toutes les 10 secondes.</p>
+            <div id="attendance-list">
+                <div class="info-text">⏳ En attente de signatures...</div>
+            </div>
+        </div>
+
+        <!-- ═══ SIGNALEMENT PÉDAGOGIQUE ══════════════════════════════════════ -->
+        <div class="card" id="signalement-section" style="display:none;">
+            <h2><span class="icon">📢</span> Signalement pédagogique</h2>
+            <p style="color:#666; font-size:14px; margin-bottom:14px;">
+                Déclarer un retard, une absence ou transmettre une observation au service pédagogique.
+            </p>
+            <button class="btn-signalement" onclick="ouvrirModalSignalement()">
+                <span>✉️</span> Déclarer un retard / Observation
+            </button>
+        </div>
+
+        <!-- ═══ LIEN RAPPORT MENSUEL ══════════════════════════════════════════ -->
+        <div class="card rapport-link-card">
+            <a href="rapport.html">📋 Générer un récapitulatif mensuel d'émargement</a>
+            <p>Exporter la feuille de présence PDF d'un apprenant sur 1 mois</p>
+        </div>
+
+    </main>
+</div><!-- /container -->
+
+<!-- ═══ MODALE SIGNALEMENT ════════════════════════════════════════════════════ -->
+<div id="modal-signalement" class="modal-overlay">
+    <div class="modal-box">
+        <h3>📢 Signalement pédagogique</h3>
+
+        <div class="form-group">
+            <label for="signal-type">Type de signalement *</label>
+            <select id="signal-type">
+                <option value="">-- Choisir --</option>
+                <option value="retard">⏰ Retard apprenant</option>
+                <option value="retard_formateur">⏰ Retard formateur</option>
+                <option value="absence">🚫 Absence non justifiée</option>
+                <option value="observation">💬 Observation pédagogique</option>
+                <option value="incident">⚠️ Incident</option>
+            </select>
+        </div>
+
+        <div class="form-group" id="signal-apprenant-group" style="display:none;">
+            <label for="signal-apprenant">Apprenant concerné</label>
+            <select id="signal-apprenant">
+                <option value="">-- Sélectionner (optionnel) --</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="signal-message">Observation / Message *</label>
+            <textarea id="signal-message" placeholder="Décrivez le retard, l'observation ou l'incident..."></textarea>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-annuler" onclick="fermerModalSignalement()">Annuler</button>
+            <button class="btn-envoyer" onclick="envoyerSignalement()">✉️ Envoyer par mail</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Bibliothèques ════════════════════════════════════════════════════════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="js/resources-loader.js"></script>
+<script src="js/formateur.js"></script>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCRIPT INLINE — Chargement des sessions + logique signature formateur
+   ═══════════════════════════════════════════════════════════════════════════ */
+const API_RESOURCES = 'https://suivi-presence-success.vercel.app/api';
+const JOURS = { 0:null, 1:'LUNDI', 2:'MARDI', 3:'MERCREDI', 4:'JEUDI', 5:'VENDREDI', 6:null };
+let apprenantsActuels = [];
+
+function getJourActuel() {
+    return JOURS[new Date().getDay()] || null;
+}
+
+// ── Chargement des sessions disponibles ───────────────────────────────────────
+async function initSessions() {
+    const jourActuel   = getJourActuel();
+    const infoJourEl   = document.getElementById('info-jour');
+    const selectSession = document.getElementById('session-select');
+
+    infoJourEl.innerHTML = jourActuel
+        ? `📅 Aujourd'hui : <strong>${jourActuel}</strong> — Sessions du jour + AFC disponibles`
+        : `🚫 Week-end — Seules les <strong>sessions AFC</strong> sont disponibles`;
+
+    try {
+        const res       = await fetch(`${API_RESOURCES}/resources/all`);
+        const ressources = await res.json();
+
+        const sessionsMap = new Map();
+        ressources.forEach(r => {
+            const key = `${r.jour}||${r.formation}`;
+            if (!sessionsMap.has(key)) sessionsMap.set(key, { jour: r.jour, formation: r.formation });
+        });
+
+        const sessionsAujourdHui = [];
+        const sessionsAFC        = [];
+
+        sessionsMap.forEach(s => {
+            if (s.jour === 'AFC')                          sessionsAFC.push(s);
+            else if (jourActuel && s.jour === jourActuel)  sessionsAujourdHui.push(s);
+        });
+
+        selectSession.innerHTML = '<option value="">-- Sélectionner une session --</option>';
+
+        if (sessionsAujourdHui.length > 0) {
+            const g1 = document.createElement('optgroup');
+            g1.label = `📅 Sessions ${jourActuel}`;
+            sessionsAujourdHui.sort((a,b) => a.formation.localeCompare(b.formation)).forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = JSON.stringify({ jour: s.jour, formation: s.formation });
+                opt.textContent = `${s.jour} — ${s.formation}`;
+                g1.appendChild(opt);
+            });
+            selectSession.appendChild(g1);
+        }
+
+        if (sessionsAFC.length > 0) {
+            const g2 = document.createElement('optgroup');
+            g2.label = '🔄 Sessions AFC (toujours disponibles)';
+            sessionsAFC.sort((a,b) => a.formation.localeCompare(b.formation)).forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = JSON.stringify({ jour: s.jour, formation: s.formation });
+                opt.textContent = `AFC — ${s.formation}`;
+                g2.appendChild(opt);
+            });
+            selectSession.appendChild(g2);
+        }
+
+        const optAutre = document.createElement('option');
+        optAutre.value = 'AUTRE';
+        optAutre.textContent = '➕ Autre formation (saisie manuelle)...';
+        selectSession.appendChild(optAutre);
+
+    } catch(e) {
+        console.error('❌ Erreur sessions:', e);
+        selectSession.innerHTML = '<option value="">Erreur de chargement</option>';
+    }
+}
+
+// ── Changement de session ─────────────────────────────────────────────────────
+document.getElementById('session-select').addEventListener('change', async function() {
+    const val             = this.value;
+    const manualGroup     = document.getElementById('manual-session-group');
+    const formateurSection = document.getElementById('formateur-section');
+    const apprenantsSection = document.getElementById('apprenants-section');
+    const listEl          = document.getElementById('apprenants-list');
+    const countEl         = document.getElementById('apprenants-count');
+    const btnGenerate     = document.getElementById('generate-qr');
+
+    document.getElementById('formateur-nom').value   = '';
+    document.getElementById('formateur-prenom').value = '';
+    document.getElementById('formation').value        = '';
+    formateurSection.style.display   = 'none';
+    apprenantsSection.style.display  = 'none';
+    btnGenerate.disabled             = true;
+    apprenantsActuels                = [];
+
+    if (typeof setListeApprenants === 'function') setListeApprenants([]);
+    if (typeof setJourActuel      === 'function') setJourActuel(null);
+
+    if (!val) { manualGroup.style.display = 'none'; return; }
+
+    if (val === 'AUTRE') {
+        manualGroup.style.display = 'block';
+        document.getElementById('manual-formation').value = '';
+        const selF = document.getElementById('formateur-select');
+        selF.innerHTML = '<option value="">-- Sélectionner votre nom --</option><option value="AUTRE">➕ Autre formateur (saisie manuelle)...</option>';
+        formateurSection.style.display = 'block';
+        return;
+    }
+
+    manualGroup.style.display = 'none';
+    const { jour, formation } = JSON.parse(val);
+    document.getElementById('formation').value = formation;
+    if (typeof setJourActuel === 'function') setJourActuel(jour);
+
+    // Formateurs
+    try {
+        const resF      = await fetch(`${API_RESOURCES}/resources/formateurs?jour=${encodeURIComponent(jour)}&formation=${encodeURIComponent(formation)}`);
+        const formateurs = await resF.json();
+        const sel = document.getElementById('formateur-select');
+        sel.innerHTML = '<option value="">-- Sélectionner votre nom --</option>';
+        formateurs.forEach(nom => {
+            const opt = document.createElement('option');
+            opt.value = nom; opt.textContent = nom;
+            sel.appendChild(opt);
+        });
+        const optAutreF = document.createElement('option');
+        optAutreF.value = 'AUTRE';
+        optAutreF.textContent = "➕ Mon nom n'est pas dans la liste...";
+        sel.appendChild(optAutreF);
+        formateurSection.style.display = 'block';
+    } catch(e) { console.error('❌ Erreur formateurs:', e); }
+
+    // Apprenants
+    try {
+        const resA       = await fetch(`${API_RESOURCES}/resources/apprenants?jour=${encodeURIComponent(jour)}&formation=${encodeURIComponent(formation)}`);
+        const apprenants  = await resA.json();
+        apprenantsActuels = apprenants;
+        if (typeof setListeApprenants === 'function') setListeApprenants(apprenants);
+        countEl.textContent = apprenants.length;
+        listEl.innerHTML = apprenants.length > 0
+            ? apprenants.map(nom => `<div class="apprenant-item">👤 ${nom}</div>`).join('')
+            : '<em>Aucun apprenant trouvé</em>';
+        apprenantsSection.style.display = 'block';
+    } catch(e) {
+        listEl.innerHTML = '<em>⚠️ Impossible de charger les apprenants</em>';
+    }
+});
+
+// ── Changement de formateur ───────────────────────────────────────────────────
+document.getElementById('formateur-select').addEventListener('change', function() {
+    const val         = this.value;
+    const manualGroup = document.getElementById('manual-formateur-group');
+    const btnGenerate = document.getElementById('generate-qr');
+
+    if (!val) { manualGroup.style.display = 'none'; btnGenerate.disabled = true; return; }
+
+    if (val === 'AUTRE') {
+        manualGroup.style.display = 'block';
+        document.getElementById('manual-formateur-nom').value = '';
+        btnGenerate.disabled = false;
+        return;
+    }
+
+    manualGroup.style.display = 'none';
+    const parts = val.split(' ');
+    document.getElementById('formateur-nom').value    = parts[0] || '';
+    document.getElementById('formateur-prenom').value = parts.slice(1).join(' ') || parts[0];
+    btnGenerate.disabled = false;
+});
+
+window.addEventListener('DOMContentLoaded', initSessions);
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LOGIQUE SIGNATURE FORMATEUR
+   ═══════════════════════════════════════════════════════════════════════════ */
+const sigState = {
+    matin:       { signed: false, data: null },
+    'apres-midi':{ signed: false, data: null }
+};
+let activeTab  = 'matin';
+let sigDrawing = {};
+
+function initCanvas(creneau) {
+    const canvas = document.getElementById(`sig-canvas-${creneau}`);
+    const wrap   = canvas.parentElement;
+    canvas.width  = wrap.offsetWidth || 320;
+    canvas.height = 120;
+    const ctx = canvas.getContext('2d');
+    ctx.strokeStyle = '#1a1a2e';
+    ctx.lineWidth   = 2.5;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    sigDrawing[creneau] = { drawing: false, ctx };
+
+    function getPos(e) {
+        const rect   = canvas.getBoundingClientRect();
+        const scaleX = canvas.width  / rect.width;
+        const scaleY = canvas.height / rect.height;
+        if (e.touches) {
+            return { x: (e.touches[0].clientX - rect.left) * scaleX, y: (e.touches[0].clientY - rect.top) * scaleY };
+        }
+        return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+    }
+
+    function startDraw(e) {
+        e.preventDefault();
+        sigDrawing[creneau].drawing = true;
+        const pos = getPos(e);
+        ctx.beginPath(); ctx.moveTo(pos.x, pos.y);
+        document.getElementById(`placeholder-${creneau}`).style.display = 'none';
+    }
+    function draw(e) {
+        if (!sigDrawing[creneau].drawing) return;
+        e.preventDefault();
+        const pos = getPos(e);
+        ctx.lineTo(pos.x, pos.y); ctx.stroke();
+    }
+    function endDraw() { sigDrawing[creneau].drawing = false; }
+
+    canvas.addEventListener('mousedown',  startDraw);
+    canvas.addEventListener('mousemove',  draw);
+    canvas.addEventListener('mouseup',    endDraw);
+    canvas.addEventListener('mouseleave', endDraw);
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove',  draw,      { passive: false });
+    canvas.addEventListener('touchend',   endDraw);
+}
+
+function clearCanvas(creneau) {
+    const canvas = document.getElementById(`sig-canvas-${creneau}`);
+    const ctx    = sigDrawing[creneau] ? sigDrawing[creneau].ctx : canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    document.getElementById(`placeholder-${creneau}`).style.display = '';
+}
+
+// ── MODIFICATION CLÉ : sauvegarderSignature appelle PATCH si session active ──
+function sauvegarderSignature(creneau) {
+    const canvas    = document.getElementById(`sig-canvas-${creneau}`);
+    const ctx       = sigDrawing[creneau] ? sigDrawing[creneau].ctx : canvas.getContext('2d');
+    const pixelData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const hasContent = Array.from(pixelData).some((v, i) => i % 4 === 3 && v > 0);
+    if (!hasContent) { alert('Veuillez signer avant de valider.'); return; }
+
+    const dataUrl = canvas.toDataURL('image/png');
+    sigState[creneau].signed = true;
+    sigState[creneau].data   = dataUrl;
+
+    // ── Envoyer vers Google Sheets si une session est déjà active ─────────────
+    if (window.patchSignatureFormateur) {
+        window.patchSignatureFormateur(creneau, dataUrl);
+    }
+
+    // Afficher l'aperçu
+    document.getElementById(`preview-img-${creneau}`).src     = dataUrl;
+    document.getElementById(`preview-${creneau}`).style.display = 'block';
+    canvas.parentElement.style.display = 'none';
+    document.querySelectorAll('.sig-canvas-wrap + .sig-actions').forEach(el => {
+        if (el.closest(`#sig-panel-${creneau}`)) el.style.display = 'none';
+    });
+
+    // Marquer l'onglet comme signé
+    const tabBtn = document.getElementById(`tab-${creneau}`);
+    tabBtn.classList.remove('active');
+    tabBtn.classList.add('signed');
+    tabBtn.textContent = creneau === 'matin' ? '✅ Matin signé' : '✅ Après-midi signé';
+}
+
+function refaireSignature(creneau) {
+    sigState[creneau].signed = false;
+    sigState[creneau].data   = null;
+    document.getElementById(`preview-${creneau}`).style.display = 'none';
+    const canvas = document.getElementById(`sig-canvas-${creneau}`);
+    canvas.parentElement.style.display = '';
+    canvas.parentElement.nextElementSibling.style.display = '';
+    clearCanvas(creneau);
+    const tabBtn = document.getElementById(`tab-${creneau}`);
+    tabBtn.classList.remove('signed');
+    tabBtn.classList.add('active');
+    tabBtn.textContent = creneau === 'matin' ? '🌅 Matin' : '🌇 Après-midi';
+}
+
+function switchSigTab(creneau) {
+    activeTab = creneau;
+    document.getElementById('sig-panel-matin').style.display      = creneau === 'matin'      ? 'block' : 'none';
+    document.getElementById('sig-panel-apres-midi').style.display = creneau === 'apres-midi' ? 'block' : 'none';
+    document.getElementById('tab-matin').classList.toggle('active',      creneau === 'matin'      && !sigState['matin'].signed);
+    document.getElementById('tab-apres-midi').classList.toggle('active', creneau === 'apres-midi' && !sigState['apres-midi'].signed);
+}
+
+// Exposer sigState pour formateur.js
+window.getSignatureFormateur = function(creneau) {
+    return sigState[creneau] ? sigState[creneau].data : null;
+};
+
+window.addEventListener('DOMContentLoaded', () => {
+    initCanvas('matin');
+    initCanvas('apres-midi');
+    const slot = typeof getCurrentSlot === 'function' ? getCurrentSlot() : null;
+    if (slot && slot.id === 'apres-midi') switchSigTab('apres-midi');
+});
+</script>
+</body>
+</html>
