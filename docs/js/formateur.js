@@ -18,59 +18,64 @@ let activeSessionCode = null;
 let listeApprenants   = [];
 let currentJour       = null;
 
-// ── Expose l'activeSessionCode pour les autres scripts (ex: index.html) ───────
 window.getActiveSessionCode = () => activeSessionCode;
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Application Formateur démarrée');
     updateDateTime();
     setInterval(updateDateTime, 60000);
-
-    // Rafraîchissement automatique toutes les 10 s si session active
     setInterval(() => {
         if (activeSessionCode) loadSessionAttendance(activeSessionCode);
     }, 10000);
 });
 
+// ✅ FIX #1 : protège currentDateEl/currentSlotEl contre null
+// ✅ FIX #2 : passe isAFC basé sur currentJour OU fallback 'two-slot'
 function updateDateTime() {
     const now     = new Date();
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    currentDateEl.textContent = now.toLocaleDateString('fr-FR', options);
+    if (currentDateEl) currentDateEl.textContent = now.toLocaleDateString('fr-FR', options);
 
-   const isAFC = currentJour === 'AFC';
-const slot  = getCurrentSlot(isAFC);
-    if (slot) {
-        currentSlotEl.textContent  = slot.label;
-        currentSlotEl.style.color  = 'var(--sf-success)';
-    } else {
-        currentSlotEl.textContent  = 'Hors horaires de pointage';
-        currentSlotEl.style.color  = 'var(--sf-error)';
+    // Tente AFC d'abord, puis standard — affiche le premier créneau trouvé
+    const isAFC = currentJour === 'AFC';
+    const slot  = getCurrentSlot(isAFC) || getCurrentSlot(!isAFC);
+
+    if (currentSlotEl) {
+        if (slot) {
+            currentSlotEl.textContent = slot.label;
+            currentSlotEl.style.color = 'var(--sf-success)';
+        } else {
+            currentSlotEl.textContent = 'Hors horaires de pointage';
+            currentSlotEl.style.color = 'var(--sf-error)';
+        }
     }
 }
 
-// Après — AFC : 8h00 au lieu de 8h30
+// ✅ FIX #3 : accepte isAFC en paramètre + fuseau Réunion explicite
 function getCurrentSlot(isAFC = false) {
-    const now  = new Date();
-    const day  = now.getDay();
-    const time = now.getHours() * 60 + now.getMinutes();
+    // Force l'heure locale de La Réunion (UTC+4)
+    const now      = new Date(new Date().toLocaleString('en-US', { timeZone: 'Indian/Reunion' }));
+    const day      = now.getDay();
+    const time     = now.getHours() * 60 + now.getMinutes();
+
     if (day === 0 || day === 6) return null;
+
     if (isAFC) {
-        if (time >= 480 && time <= 720)  return { id: 'matin',     label: 'Matin (8h00 - 12h00)' };
+        if (time >= 480 && time <= 720)  return { id: 'matin',      label: 'Matin (8h00 - 12h00)' };
         if (time >= 780 && time <= 1005) return { id: 'apres-midi', label: 'Après-midi (13h00 - 16h30)' };
     } else {
-        if (time >= 510 && time <= 735)  return { id: 'matin',     label: 'Matin (8h30 - 12h00)' };
-        if (time >= 780 && time <= 1005) return { id: 'apres-midi', label: 'Après-midi (13h00 - 16h30)' };
+        if (time >= 510 && time <= 735)  return { id: 'matin',      label: 'Matin (8h30 - 12h15)' };
+        if (time >= 780 && time <= 1005) return { id: 'apres-midi', label: 'Après-midi (13h00 - 16h45)' };
     }
     return null;
 }
 
-// Appelé depuis index.html quand les apprenants sont chargés
 function setListeApprenants(liste) { listeApprenants = liste || []; }
+function setJourActuel(jour) {
+    currentJour = jour || null;
+    updateDateTime(); // ✅ FIX #4 : re-calcule le créneau dès que le jour change
+}
 
-// Appelé depuis index.html pour transmettre le jour sélectionné
-function setJourActuel(jour) { currentJour = jour || null; }
-
-// ── Générer le QR Code ────────────────────────────────────────────────────────
 generateQRBtn.addEventListener('click', async () => {
     const manualFormation = document.getElementById('manual-formation').value.trim();
     const manualFormateur = document.getElementById('manual-formateur-nom').value.trim();
@@ -86,8 +91,8 @@ generateQRBtn.addEventListener('click', async () => {
 
     if (document.getElementById('formateur-select').value === 'AUTRE') {
         if (!manualFormateur) { alert('Veuillez saisir votre nom'); return; }
-        const parts    = manualFormateur.split(' ');
-        finalFormNom   = parts[0] || '';
+        const parts     = manualFormateur.split(' ');
+        finalFormNom    = parts[0] || '';
         finalFormPrenom = parts.slice(1).join(' ') || parts[0];
     }
 
@@ -96,45 +101,45 @@ generateQRBtn.addEventListener('click', async () => {
         return;
     }
 
-const jourSession = currentJour || 'AFC';
-const isAFC = jourSession === 'AFC' || finalFormation.toUpperCase().trim().startsWith('AFC');
-const slot = getCurrentSlot(isAFC);
+    // ✅ FIX #5 : calcule isAFC depuis le jour ET le nom de formation
+    const jourSession = currentJour || 'AFC';
+    const isAFC = jourSession === 'AFC' || finalFormation.toUpperCase().trim().startsWith('AFC');
+    const slot  = getCurrentSlot(isAFC);
+
     if (!slot) {
         alert("Le pointage n'est disponible qu'aux horaires de formation");
         return;
     }
 
-
-    // ── Récupérer les signatures déjà enregistrées ────────────────────────────
-    const sigMatin    = window.getSignatureFormateur ? window.getSignatureFormateur('matin')     : null;
-    const sigApresMidi = window.getSignatureFormateur ? window.getSignatureFormateur('apres-midi') : null;
+    const sigMatin     = window.getSignatureFormateur ? window.getSignatureFormateur('matin')      : null;
+    const sigApresMidi = window.getSignatureFormateur ? window.getSignatureFormateur('apres-midi')  : null;
 
     sessionData = {
-        formateurNom:      finalFormNom.toUpperCase(),
-        formateurPrenom:   finalFormPrenom,
-        formation:         finalFormation,
-        jour:              jourSession,
-        date:              new Date().toISOString().split('T')[0],
-        creneau:           slot.id,
-        creneauLabel:      slot.label,
-        signatureMatin:    sigMatin     || '',
-        signatureApresMidi:sigApresMidi || ''
+        formateurNom:       finalFormNom.toUpperCase(),
+        formateurPrenom:    finalFormPrenom,
+        formation:          finalFormation,
+        jour:               jourSession,
+        date:               new Date().toISOString().split('T')[0],
+        creneau:            slot.id,
+        creneauLabel:       slot.label,
+        signatureMatin:     sigMatin      || '',
+        signatureApresMidi: sigApresMidi  || ''
     };
 
     try {
-        generateQRBtn.disabled = true;
+        generateQRBtn.disabled  = true;
         generateQRBtn.innerHTML = 'Génération...';
 
         const response = await fetch(`${API_URL}/sessions`, {
-            method: 'POST',
+            method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(sessionData)
+            body:    JSON.stringify(sessionData)
         });
         if (!response.ok) throw new Error('Erreur lors de la création de la session');
 
         const { sessionCode } = await response.json();
         activeSessionCode = sessionCode;
-        window.getActiveSessionCode = () => activeSessionCode; // Rafraîchir l'exposition
+        window.getActiveSessionCode = () => activeSessionCode;
 
         const baseURL      = window.location.origin + window.location.pathname.replace('index.html', '');
         const signatureURL = `${baseURL}signature.html?code=${sessionCode}`;
@@ -156,14 +161,13 @@ const slot = getCurrentSlot(isAFC);
     }
 });
 
-// ── Mettre à jour la signature formateur après coup (PATCH) ──────────────────
 async function patchSignatureFormateur(creneau, signatureData) {
     if (!activeSessionCode || !signatureData) return;
     try {
         const resp = await fetch(`${API_URL}/sessions/${activeSessionCode}/signature`, {
-            method: 'PATCH',
+            method:  'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ creneau, signature: signatureData })
+            body:    JSON.stringify({ creneau, signature: signatureData })
         });
         if (resp.ok) {
             console.log(`✅ Signature ${creneau} envoyée vers Sheets`);
@@ -174,11 +178,8 @@ async function patchSignatureFormateur(creneau, signatureData) {
         console.warn('PATCH signature échoué (hors-ligne ?):', err);
     }
 }
-
-// Exposer pour index.html
 window.patchSignatureFormateur = patchSignatureFormateur;
 
-// ── Affichage du QR Code ──────────────────────────────────────────────────────
 function displayQRCode(url) {
     qrcodeContainer.innerHTML = '';
     const size = Math.min(window.innerWidth - 80, 300);
@@ -208,14 +209,13 @@ function displayQRCode(url) {
 downloadQRBtn.addEventListener('click', () => {
     const canvas = qrcodeContainer.querySelector('canvas');
     if (canvas) {
-        const link      = document.createElement('a');
-        link.download   = `QR-Success-${sessionData.formation}-${sessionData.date}.png`;
-        link.href       = canvas.toDataURL('image/png');
+        const link    = document.createElement('a');
+        link.download = `QR-Success-${sessionData.formation}-${sessionData.date}.png`;
+        link.href     = canvas.toDataURL('image/png');
         link.click();
     }
 });
 
-// ── Chargement des présences ──────────────────────────────────────────────────
 async function loadSessionAttendance(sessionCode) {
     try {
         const today    = new Date().toISOString().split('T')[0];
@@ -223,8 +223,7 @@ async function loadSessionAttendance(sessionCode) {
         if (!response.ok) return;
 
         const attendances = await response.json();
-
-        const normalise = str => str
+        const normalise   = str => str
             ? str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
             : '';
 
@@ -291,7 +290,6 @@ function renderAttendance(presents, absents) {
     attendanceList.innerHTML = html;
 }
 
-// ── Signalement pédagogique ───────────────────────────────────────────────────
 function ouvrirModalSignalement() {
     const modal = document.getElementById('modal-signalement');
     modal.style.display = 'flex';
@@ -304,7 +302,7 @@ function ouvrirModalSignalement() {
         selectApprenant.appendChild(opt);
     });
 
-    document.getElementById('signal-type').onchange = function() {
+    document.getElementById('signal-type').onchange = function () {
         const types = ['retard', 'absence'];
         document.getElementById('signal-apprenant-group').style.display =
             types.includes(this.value) ? 'block' : 'none';
@@ -327,19 +325,20 @@ function envoyerSignalement() {
     if (!type)    { alert('Veuillez sélectionner un type de signalement.'); return; }
     if (!message) { alert('Veuillez rédiger un message ou une observation.'); return; }
 
-    const formationVal   = sessionData ? sessionData.formation : 'Non renseignée';
-    const formateurVal   = sessionData ? `${sessionData.formateurPrenom} ${sessionData.formateurNom}` : 'Non renseigné';
-    const dateVal        = sessionData ? sessionData.date : new Date().toISOString().split('T')[0];
-    const creneauVal     = sessionData ? sessionData.creneauLabel : 'Non renseigné';
+    const formationVal = sessionData ? sessionData.formation                              : 'Non renseignée';
+    const formateurVal = sessionData ? `${sessionData.formateurPrenom} ${sessionData.formateurNom}` : 'Non renseigné';
+    const dateVal      = sessionData ? sessionData.date                                   : new Date().toISOString().split('T')[0];
+    const creneauVal   = sessionData ? sessionData.creneauLabel                           : 'Non renseigné';
 
     const typesLabels = {
-        retard:           '⏰ Retard apprenant',
-        absence:          '🚫 Absence non justifiée',
-        observation:      '💬 Observation pédagogique',
-        incident:         '⚠️ Incident'
+        retard:      '⏰ Retard apprenant',
+        absence:     '🚫 Absence non justifiée',
+        observation: '💬 Observation pédagogique',
+        incident:    '⚠️ Incident'
     };
 
     const sujet = encodeURIComponent(`[Signalement] ${typesLabels[type]} – ${formationVal} – ${dateVal}`);
+    // ✅ FIX #6 : \n au lieu de \\n
     const corps = encodeURIComponent(
 `Bonjour,
 
