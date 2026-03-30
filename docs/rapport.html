@@ -1,1 +1,771 @@
-PLACEHOLDER_RAPPORT_HTML
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Récapitulatif Mensuel – Success Formation</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        /* ── Variables ── */
+        :root {
+            --sf-bg: #f1d7bc;
+            --sf-border: #ce2a45;
+            --sf-orange: #fc772c;
+            --sf-slate: #5c646b;
+            --sf-white: #ffffff;
+            --sf-success: #2d9e6b;
+        }
+
+        /* ── Formulaire ── */
+        .form-row {
+            display: flex; gap: 12px; flex-wrap: wrap;
+        }
+        .form-row .form-group { flex: 1; min-width: 160px; }
+
+        select, input[type="number"], input[type="date"] {
+            width: 100%; padding: 12px 14px;
+            border: 2px solid #e0e0e0; border-radius: 10px;
+            font-size: 15px; background: #fff;
+            box-sizing: border-box;
+        }
+        select:focus, input:focus { border-color: var(--sf-border); outline: none; }
+
+        label { display: block; font-weight: 600; color: var(--sf-slate);
+                font-size: 0.88rem; margin-bottom: 6px; }
+
+        .btn-load {
+            width: 100%; padding: 14px; margin-top: 14px;
+            background: linear-gradient(135deg, var(--sf-border) 0%, var(--sf-orange) 100%);
+            color: #fff; border: none; border-radius: 12px;
+            font-size: 1rem; font-weight: 700; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-load:disabled { background: #cbd5e0; cursor: not-allowed; }
+        .btn-load:hover:not(:disabled) { opacity: 0.9; }
+
+        .btn-pdf {
+            width: 100%; padding: 16px; margin-top: 8px;
+            background: linear-gradient(135deg, #1a7e4f 0%, var(--sf-success) 100%);
+            color: #fff; border: none; border-radius: 12px;
+            font-size: 1.05rem; font-weight: 700; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-pdf:disabled { background: #cbd5e0; cursor: not-allowed; }
+        .btn-pdf:hover:not(:disabled) { opacity: 0.92; }
+
+        /* ── Table preview ── */
+        .preview-table-wrap { overflow-x: auto; margin-top: 8px; }
+        table.preview {
+            width: 100%; border-collapse: collapse; font-size: 13px;
+        }
+        table.preview th {
+            background: var(--sf-border); color: #fff; padding: 8px 10px;
+            text-align: center; white-space: nowrap;
+        }
+        table.preview td {
+            padding: 7px 10px; border-bottom: 1px solid #eee; text-align: center;
+        }
+        table.preview tr:nth-child(even) td { background: #fafafa; }
+        .badge-present {
+            background: #eafaf1; color: var(--sf-success);
+            border-radius: 6px; padding: 2px 8px; font-weight: 600; font-size: 12px;
+        }
+        .badge-absent {
+            background: #fdf0f0; color: var(--sf-border);
+            border-radius: 6px; padding: 2px 8px; font-weight: 600; font-size: 12px;
+        }
+        .total-row td {
+            font-weight: 700; background: #fff8f0 !important;
+            border-top: 3px solid var(--sf-orange);
+        }
+
+        /* ── Stats résumé ── */
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+            margin-bottom: 16px;
+        }
+        .stat-card {
+            background: #fdfaf7; border: 2px solid var(--sf-bg);
+            border-radius: 10px; padding: 12px; text-align: center;
+        }
+        .stat-card .val {
+            font-size: 1.5rem; font-weight: 700; color: var(--sf-border);
+        }
+        .stat-card .lbl { font-size: 0.8rem; color: var(--sf-slate); }
+
+        /* ── Retards ── */
+        .retard-entry {
+            display: flex; gap: 8px; align-items: center;
+            margin-bottom: 8px; flex-wrap: wrap;
+        }
+        .retard-entry input[type="date"] { flex: 1; min-width: 140px; }
+        .retard-entry select { flex: 0 0 100px; }
+        .btn-rm-retard {
+            background: none; border: 2px solid var(--sf-border);
+            color: var(--sf-border); border-radius: 8px; padding: 6px 12px;
+            cursor: pointer; font-weight: 700; font-size: 16px; line-height: 1;
+        }
+        .btn-add-retard {
+            background: #fff0f2; border: 2px dashed var(--sf-border);
+            color: var(--sf-border); border-radius: 8px; padding: 10px 16px;
+            cursor: pointer; font-weight: 600; font-size: 14px;
+            display: flex; align-items: center; gap: 6px; margin-top: 4px;
+        }
+
+        /* ── Loading spinner ── */
+        .spinner {
+            display: inline-block; width: 18px; height: 18px;
+            border: 3px solid rgba(255,255,255,.4); border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Alert ── */
+        .alert {
+            padding: 12px 16px; border-radius: 10px; margin-bottom: 12px;
+            font-size: 14px; display: flex; align-items: center; gap: 8px;
+        }
+        .alert-info    { background: #e8f4fd; border-left: 4px solid #3498db; color: #1a5c8a; }
+        .alert-success { background: #eafaf1; border-left: 4px solid var(--sf-success); color: #1a6040; }
+        .alert-error   { background: #fdf0f0; border-left: 4px solid var(--sf-border);  color: #7a1020; }
+
+        header .logo { display: flex; align-items: center; gap: 12px; justify-content: center; margin-bottom: 8px; }
+        header .logo img { max-width: 120px; }
+        header .logo span { font-size: 1.3rem; font-weight: 700; color: var(--sf-border); }
+        header h1 { color: var(--sf-border); font-size: 1.4rem; }
+        .nav-back { display: inline-flex; align-items: center; gap: 6px;
+                    color: var(--sf-border); text-decoration: none; font-weight: 600;
+                    margin-bottom: 12px; font-size: 14px; }
+        .nav-back:hover { opacity: 0.75; }
+
+        @media(max-width:480px) {
+            .stats-grid { grid-template-columns: repeat(2,1fr); }
+            .form-row .form-group { min-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <a href="index.html" class="nav-back">← Retour à l'interface formateur</a>
+
+    <header>
+        <div class="logo">
+            <img src="img/Logo%20success%20Formation%20rec.PNG" alt="Success Formation">
+            <span>Success Formation</span>
+        </div>
+        <h1>📋 Récapitulatif Mensuel d'Émargement</h1>
+        <p class="subtitle">Génération des feuilles de présence PDF</p>
+    </header>
+
+    <!-- ── Sélection des paramètres ── -->
+    <div class="card">
+        <h2>⚙️ Paramètres du rapport</h2>
+
+        <div id="alert-zone"></div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="sel-apprenant">👤 Apprenant(e) *</label>
+                <select id="sel-apprenant">
+                    <option value="">⏳ Chargement...</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row" style="margin-top:12px;">
+            <div class="form-group">
+                <label for="sel-mois">📅 Mois *</label>
+                <select id="sel-mois">
+                    <option value="1">Janvier</option>
+                    <option value="2">Février</option>
+                    <option value="3">Mars</option>
+                    <option value="4">Avril</option>
+                    <option value="5">Mai</option>
+                    <option value="6">Juin</option>
+                    <option value="7">Juillet</option>
+                    <option value="8">Août</option>
+                    <option value="9">Septembre</option>
+                    <option value="10">Octobre</option>
+                    <option value="11">Novembre</option>
+                    <option value="12">Décembre</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="sel-annee">📆 Année *</label>
+                <input type="number" id="sel-annee" min="2024" max="2030" step="1" value="">
+            </div>
+        </div>
+
+        <button class="btn-load" id="btn-charger" onclick="chargerDonnees()">
+            🔍 Charger les données
+        </button>
+    </div>
+
+    <!-- ── Résumé statistique ── -->
+    <div class="card hidden" id="stats-section">
+        <h2>📊 Résumé</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="val" id="stat-jours-present">—</div>
+                <div class="lbl">Jours présents</div>
+            </div>
+            <div class="stat-card">
+                <div class="val" id="stat-demi-jour">—</div>
+                <div class="lbl">Demi-journées validées</div>
+            </div>
+            <div class="stat-card">
+                <div class="val" id="stat-heures">—</div>
+                <div class="lbl">Heures totales</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Aperçu du tableau ── -->
+    <div class="card hidden" id="preview-section">
+        <h2>📄 Aperçu du récapitulatif</h2>
+        <p style="font-size:13px;color:#666;margin-bottom:10px;">
+            Les signatures seront visibles dans le PDF final.
+        </p>
+        <div class="preview-table-wrap">
+            <table class="preview" id="preview-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Formation</th>
+                        <th>🌅 Matin</th>
+                        <th>🌇 Après-midi</th>
+                        <th>Formateur</th>
+                        <th>Retard</th>
+                        <th>Heures</th>
+                    </tr>
+                </thead>
+                <tbody id="preview-tbody"></tbody>
+                <tfoot id="preview-tfoot"></tfoot>
+            </table>
+        </div>
+    </div>
+
+    <!-- ── Gestion des retards ── -->
+    <div class="card hidden" id="retards-section">
+        <h2>⏰ Retards (optionnel)</h2>
+        <p style="font-size:13px;color:#666;margin-bottom:14px;">
+            Saisissez les retards à déduire du calcul des heures (granularité : 1 heure).
+        </p>
+        <div id="retards-list"></div>
+        <button class="btn-add-retard" onclick="ajouterRetard()">
+            ➕ Ajouter un retard
+        </button>
+    </div>
+
+    <!-- ── Génération PDF ── -->
+    <div class="card hidden" id="pdf-section">
+        <h2>📥 Générer le PDF</h2>
+        <div class="alert alert-info">
+            ℹ️ Le PDF sera au format A4 paysage, avec les signatures numérisées des apprenants et du formateur.
+        </div>
+        <button class="btn-pdf" id="btn-pdf" onclick="genererPDF()">
+            📄 Télécharger la feuille d'émargement PDF
+        </button>
+    </div>
+
+</div><!-- /container -->
+
+<script>
+// ── Configuration ──────────────────────────────────────────────────────────────
+const API = 'https://suivi-presence-success.vercel.app/api';
+
+let donnees        = null;   // Réponse brute de l'API
+let retardsData    = {};     // { 'YYYY-MM-DD': heuresEntier }
+
+// ── Mois noms ──────────────────────────────────────────────────────────────────
+const MOIS_NOMS = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+    // Pré-sélectionner le mois courant
+    const now = new Date();
+    document.getElementById('sel-mois').value  = now.getMonth() + 1;
+    document.getElementById('sel-annee').value = now.getFullYear();
+
+    chargerApprenants();
+});
+
+// ── Chargement de la liste des apprenants ──────────────────────────────────────
+async function chargerApprenants() {
+    const sel = document.getElementById('sel-apprenant');
+    sel.innerHTML = '<option value="">⏳ Chargement...</option>';
+    try {
+        const resp = await fetch(`${API}/rapport/apprenants`);
+        const liste = await resp.json();
+
+        sel.innerHTML = '<option value="">-- Sélectionner un(e) apprenant(e) --</option>';
+        liste.forEach(nom => {
+            const opt = document.createElement('option');
+            opt.value = nom; opt.textContent = nom;
+            sel.appendChild(opt);
+        });
+    } catch (e) {
+        sel.innerHTML = '<option value="">⚠️ Erreur de chargement</option>';
+        showAlert('error', 'Impossible de charger la liste des apprenants. Vérifiez la connexion.');
+    }
+}
+
+// ── Chargement des données de présence ────────────────────────────────────────
+async function chargerDonnees() {
+    const nomComplet = document.getElementById('sel-apprenant').value;
+    const mois       = document.getElementById('sel-mois').value;
+    const annee      = document.getElementById('sel-annee').value;
+
+    if (!nomComplet) { showAlert('error', 'Veuillez sélectionner un(e) apprenant(e).'); return; }
+    if (!mois || !annee) { showAlert('error', 'Veuillez sélectionner le mois et l\'année.'); return; }
+
+    const btn = document.getElementById('btn-charger');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Chargement...';
+    clearAlert();
+
+    try {
+        const url  = `${API}/rapport/mensuel?nomComplet=${encodeURIComponent(nomComplet)}&mois=${mois}&annee=${annee}`;
+        const resp = await fetch(url);
+
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.error || `Erreur HTTP ${resp.status}`);
+        }
+
+        donnees = await resp.json();
+
+        if (!donnees.attendances || donnees.attendances.length === 0) {
+            showAlert('info', `Aucune présence enregistrée pour ${nomComplet} en ${MOIS_NOMS[mois]} ${annee}.`);
+            ['stats-section','preview-section','retards-section','pdf-section'].forEach(id =>
+                document.getElementById(id).classList.add('hidden'));
+        } else {
+            retardsData = {};
+            afficherApercu();
+            showAlert('success', `${donnees.attendances.length} jour(s) de présence chargés pour ${nomComplet}.`);
+        }
+    } catch (e) {
+        console.error(e);
+        showAlert('error', `Erreur : ${e.message}`);
+    } finally {
+        btn.disabled  = false;
+        btn.innerHTML = '🔍 Charger les données';
+    }
+}
+
+// ── Afficher l'aperçu ─────────────────────────────────────────────────────────
+function afficherApercu() {
+    if (!donnees) return;
+
+    const tbody = document.getElementById('preview-tbody');
+    const tfoot = document.getElementById('preview-tfoot');
+
+    let totalHeures  = 0;
+    let totalDemiJ   = 0;
+    let joursPresent = new Set();
+
+    tbody.innerHTML = '';
+    donnees.attendances.forEach(day => {
+        const retard   = retardsData[day.date] || 0;
+        const hMatin   = day.matin    ? 3.5 : 0;
+        const hAM      = day.apresMidi? 3.5 : 0;
+        const hJour    = Math.max(0, hMatin + hAM - retard);
+
+        totalHeures  += hJour;
+        if (day.matin)     totalDemiJ++;
+        if (day.apresMidi) totalDemiJ++;
+        if (day.matin || day.apresMidi) joursPresent.add(day.date);
+
+        const formateurNom    = (day.matin?.formateurNom     || day.apresMidi?.formateurNom     || '');
+        const formateurPrenom = (day.matin?.formateurPrenom  || day.apresMidi?.formateurPrenom  || '');
+        const formation       = (day.matin?.formation        || day.apresMidi?.formation        || '—');
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${formatDateFr(day.date)}</strong></td>
+            <td style="font-size:12px;">${formation}</td>
+            <td>${day.matin
+                ? '<span class="badge-present">✓ Présent(e)</span>'
+                : '<span class="badge-absent">✗ Absent(e)</span>'}</td>
+            <td>${day.apresMidi
+                ? '<span class="badge-present">✓ Présent(e)</span>'
+                : '<span class="badge-absent">✗ Absent(e)</span>'}</td>
+            <td style="font-size:12px;">${formateurPrenom} ${formateurNom}</td>
+            <td id="retard-preview-${day.date}">${retard > 0 ? `-${retard}h` : '—'}</td>
+            <td><strong>${formatHeures(hJour)}</strong></td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    tfoot.innerHTML = `
+        <tr class="total-row">
+            <td colspan="5" style="text-align:right;padding-right:16px;">
+                <strong>TOTAL PÉRIODE</strong>
+            </td>
+            <td>—</td>
+            <td id="total-heures-preview"><strong>${formatHeures(totalHeures)}</strong></td>
+        </tr>`;
+
+    // Stats
+    document.getElementById('stat-jours-present').textContent = joursPresent.size;
+    document.getElementById('stat-demi-jour').textContent     = totalDemiJ;
+    document.getElementById('stat-heures').textContent        = formatHeures(totalHeures);
+
+    ['stats-section','preview-section','retards-section','pdf-section'].forEach(id =>
+        document.getElementById(id).classList.remove('hidden'));
+}
+
+// ── Gestion des retards ───────────────────────────────────────────────────────
+function ajouterRetard() {
+    const container = document.getElementById('retards-list');
+    const id        = Date.now();
+
+    const div = document.createElement('div');
+    div.className = 'retard-entry';
+    div.id        = `re-${id}`;
+    div.innerHTML = `
+        <input type="date" onchange="majRetard()" id="rd-date-${id}">
+        <select onchange="majRetard()" id="rd-h-${id}">
+            <option value="1">— 1h</option>
+            <option value="2">— 2h</option>
+            <option value="3">— 3h</option>
+        </select>
+        <button class="btn-rm-retard" onclick="document.getElementById('re-${id}').remove(); majRetard();">×</button>`;
+
+    container.appendChild(div);
+}
+
+function majRetard() {
+    retardsData = {};
+    document.querySelectorAll('.retard-entry').forEach(div => {
+        const idParts = div.id.replace('re-','');
+        const dateEl  = document.getElementById(`rd-date-${idParts}`);
+        const hEl     = document.getElementById(`rd-h-${idParts}`);
+        if (dateEl && hEl && dateEl.value) {
+            const d = dateEl.value;
+            retardsData[d] = (retardsData[d] || 0) + parseInt(hEl.value);
+        }
+    });
+
+    // Mettre à jour l'aperçu (recalcul)
+    if (donnees) {
+        let totalHeures = 0;
+        donnees.attendances.forEach(day => {
+            const retard = retardsData[day.date] || 0;
+            const h      = Math.max(0, (day.matin ? 3.5 : 0) + (day.apresMidi ? 3.5 : 0) - retard);
+            totalHeures += h;
+
+            const retardCell   = document.getElementById(`retard-preview-${day.date}`);
+            if (retardCell) retardCell.textContent = retard > 0 ? `-${retard}h` : '—';
+        });
+
+        const totalEl = document.getElementById('total-heures-preview');
+        if (totalEl) totalEl.innerHTML = `<strong>${formatHeures(totalHeures)}</strong>`;
+        document.getElementById('stat-heures').textContent = formatHeures(totalHeures);
+    }
+}
+
+// ── Génération PDF ────────────────────────────────────────────────────────────
+async function genererPDF() {
+    if (!donnees) return;
+
+    const btn        = document.getElementById('btn-pdf');
+    btn.disabled     = true;
+    btn.innerHTML    = '<span class="spinner"></span> Génération en cours...';
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+        const nomComplet = document.getElementById('sel-apprenant').value;
+        const mois       = parseInt(document.getElementById('sel-mois').value);
+        const annee      = parseInt(document.getElementById('sel-annee').value);
+        const periode    = `${MOIS_NOMS[mois]} ${annee}`;
+
+        const pageW = doc.internal.pageSize.getWidth();   // 297mm
+        const pageH = doc.internal.pageSize.getHeight();  // 210mm
+        const marg  = 10;
+        const usableW = pageW - marg * 2;
+
+        // ── 1. Logo ─────────────────────────────────────────────────────────────
+        let logoB64 = null;
+        try {
+            logoB64 = await chargerImageBase64('img/Logo%20success%20Formation%20rec.PNG');
+        } catch (_) {}
+
+        if (logoB64) {
+            doc.addImage(logoB64, 'PNG', marg, 6, 28, 14);
+        }
+
+        // ── 2. En-tête ──────────────────────────────────────────────────────────
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.setTextColor(206, 42, 69);
+        doc.text('FEUILLE D\'ÉMARGEMENT MENSUELLE', pageW / 2, 12, { align: 'center' });
+
+        doc.setFontSize(11);
+        doc.setTextColor(92, 100, 107);
+        doc.text(`Période : ${periode}`, pageW / 2, 19, { align: 'center' });
+
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Apprenant(e) : `, marg, 27);
+        doc.setFont('helvetica', 'bold');
+        doc.text(nomComplet, marg + 32, 27);
+
+        // Ligne de séparation
+        doc.setDrawColor(206, 42, 69);
+        doc.setLineWidth(0.6);
+        doc.line(marg, 30, pageW - marg, 30);
+
+        // ── 3. Construction des données de table ─────────────────────────────────
+        const COL_DATE      = 0;
+        const COL_FORMATION = 1;
+        const COL_SIG_MAT   = 2;
+        const COL_SIG_AM    = 3;
+        const COL_SIG_FORM  = 4;
+        const COL_FORMATEUR = 5;
+        const COL_RETARD    = 6;
+        const COL_HEURES    = 7;
+
+        // Largeurs colonnes (total = usableW = 277mm)
+        const colWidths = [22, 30, 52, 52, 52, 38, 14, 17];
+        // Vérification : 22+30+52+52+52+38+14+17 = 277 ✓
+
+        const imageMap  = {};   // clé 'row-col' → base64
+        const tableBody = [];
+        let grandTotalH = 0;
+        let rowIdx = 0;
+
+        donnees.attendances.forEach(day => {
+            const retard   = retardsData[day.date] || 0;
+            const hMatin   = day.matin    ? 3.5 : 0;
+            const hAM      = day.apresMidi? 3.5 : 0;
+            const hJour    = Math.max(0, hMatin + hAM - retard);
+            grandTotalH   += hJour;
+
+            const formateurNom    = (day.matin?.formateurNom    || day.apresMidi?.formateurNom    || '').trim();
+            const formateurPrenom = (day.matin?.formateurPrenom || day.apresMidi?.formateurPrenom || '').trim();
+            const formation       = (day.matin?.formation       || day.apresMidi?.formation       || '—');
+
+            // Signature formateur (matin prioritaire, sinon après-midi)
+            const sigFormateur = day.matin?.signatureFormateur     ||
+                                 day.apresMidi?.signatureFormateur  ||
+                                 day.matin?.signatureFormateurMatin ||
+                                 day.apresMidi?.signatureFormateurApresMidi ||
+                                 null;
+
+            const sigMatin = day.matin    ? (day.matin.signatureApprenant    || null) : null;
+            const sigAM    = day.apresMidi? (day.apresMidi.signatureApprenant|| null) : null;
+
+            // Stocker les images
+            if (sigMatin   && sigMatin.startsWith('data:image'))   imageMap[`${rowIdx}-${COL_SIG_MAT}`]  = sigMatin;
+            if (sigAM      && sigAM.startsWith('data:image'))      imageMap[`${rowIdx}-${COL_SIG_AM}`]   = sigAM;
+            if (sigFormateur && sigFormateur.startsWith('data:image')) imageMap[`${rowIdx}-${COL_SIG_FORM}`] = sigFormateur;
+
+            const cellStyles = { valign: 'middle', halign: 'center', cellPadding: 2 };
+
+            tableBody.push([
+                { content: formatDateFrPdf(day.date), styles: { ...cellStyles, halign: 'left', fontStyle: 'bold' } },
+                { content: formation,                 styles: { ...cellStyles, fontSize: 8 } },
+                {
+                    content: sigMatin ? '' : 'Absent(e)',
+                    styles: { ...cellStyles,
+                        textColor: sigMatin ? [255,255,255] : [200, 50, 50],
+                        fillColor: sigMatin ? [255,255,255] : [253, 240, 240],
+                        fontStyle: 'italic', fontSize: 9
+                    }
+                },
+                {
+                    content: sigAM ? '' : 'Absent(e)',
+                    styles: { ...cellStyles,
+                        textColor: sigAM ? [255,255,255] : [200, 50, 50],
+                        fillColor: sigAM ? [255,255,255] : [253, 240, 240],
+                        fontStyle: 'italic', fontSize: 9
+                    }
+                },
+                {
+                    content: sigFormateur ? '' : '—',
+                    styles: { ...cellStyles,
+                        textColor: [160, 160, 160],
+                        fontStyle: 'italic', fontSize: 9
+                    }
+                },
+                { content: `${formateurPrenom}\n${formateurNom}`.trim() || '—',
+                  styles: { ...cellStyles, fontSize: 8 } },
+                { content: retard > 0 ? `-${retard}h` : '—',
+                  styles: { ...cellStyles, textColor: retard > 0 ? [180, 60, 30] : [100,100,100], fontStyle: retard > 0 ? 'bold' : 'normal' } },
+                { content: formatHeures(hJour),
+                  styles: { ...cellStyles, fontStyle: 'bold', fontSize: 11 } }
+            ]);
+
+            rowIdx++;
+        });
+
+        // Ligne totaux
+        tableBody.push([
+            { content: 'TOTAL PÉRIODE', colSpan: 6,
+              styles: { halign: 'right', fontStyle: 'bold', fillColor: [241,215,188], textColor: [206,42,69], fontSize: 10 } },
+            { content: '—', styles: { halign: 'center', fontStyle: 'bold', fillColor: [241,215,188] } },
+            { content: formatHeures(grandTotalH),
+              styles: { halign: 'center', fontStyle: 'bold', fillColor: [241,215,188], textColor: [206,42,69], fontSize: 12 } }
+        ]);
+
+        // ── 4. Rendu table ──────────────────────────────────────────────────────
+        doc.autoTable({
+            startY:      33,
+            margin:      { left: marg, right: marg },
+            head: [[
+                { content: 'Date',          styles: { halign: 'center' } },
+                { content: 'Formation',     styles: { halign: 'center' } },
+                { content: '🌅 Sig. Apprenant Matin',        styles: { halign: 'center' } },
+                { content: '🌇 Sig. Apprenant Après-midi',   styles: { halign: 'center' } },
+                { content: '✍️ Sig. Formateur',              styles: { halign: 'center' } },
+                { content: 'Formateur',     styles: { halign: 'center' } },
+                { content: 'Retard',        styles: { halign: 'center' } },
+                { content: 'Heures',        styles: { halign: 'center' } }
+            ]],
+            body: tableBody,
+            columnStyles: {
+                0: { cellWidth: colWidths[0] },
+                1: { cellWidth: colWidths[1] },
+                2: { cellWidth: colWidths[2], minCellHeight: 22 },
+                3: { cellWidth: colWidths[3], minCellHeight: 22 },
+                4: { cellWidth: colWidths[4], minCellHeight: 22 },
+                5: { cellWidth: colWidths[5] },
+                6: { cellWidth: colWidths[6] },
+                7: { cellWidth: colWidths[7] }
+            },
+            headStyles: {
+                fillColor:   [206, 42, 69],
+                textColor:   [255, 255, 255],
+                fontStyle:   'bold',
+                fontSize:    9,
+                halign:      'center',
+                valign:      'middle',
+                cellPadding: 4
+            },
+            alternateRowStyles: { fillColor: [252, 249, 246] },
+            rowPageBreak: 'avoid',
+            // ── Hooks ─────────────────────────────────────────────────────────
+            didDrawCell: (data) => {
+                const colSig = [COL_SIG_MAT, COL_SIG_AM, COL_SIG_FORM];
+                if (data.row.section !== 'body') return;
+                if (!colSig.includes(data.column.index)) return;
+                // Ligne total (dernière ligne du body) — pas d'image
+                if (data.row.index === donnees.attendances.length) return;
+
+                const key = `${data.row.index}-${data.column.index}`;
+                const img = imageMap[key];
+
+                if (img) {
+                    const pad = 3;
+                    try {
+                        const fmt = img.includes('image/png') ? 'PNG' :
+                                    img.includes('image/jpeg') ? 'JPEG' : 'PNG';
+                        doc.addImage(
+                            img, fmt,
+                            data.cell.x + pad,
+                            data.cell.y + pad,
+                            data.cell.width  - pad * 2,
+                            data.cell.height - pad * 2
+                        );
+                    } catch (imgErr) {
+                        console.warn('Erreur image cellule:', imgErr.message);
+                    }
+                }
+            }
+        });
+
+        // ── 5. Bas de page : mentions légales + total ──────────────────────────
+        const finalY = doc.lastAutoTable.finalY || pageH - 20;
+
+        if (finalY < pageH - 25) {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(130, 130, 130);
+            doc.text(
+                `Matin : 8h30 – 12h00 (3h30)   |   Après-midi : 13h00 – 16h30 (3h30)   |   Total retards déduits`,
+                pageW / 2, finalY + 8, { align: 'center' }
+            );
+            doc.text(
+                `Document généré le ${new Date().toLocaleDateString('fr-FR')} — Success Formation`,
+                pageW / 2, finalY + 13, { align: 'center' }
+            );
+        }
+
+        // Numérotation des pages
+        const nbPages = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= nbPages; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(160, 160, 160);
+            doc.text(`Page ${i} / ${nbPages}`, pageW - marg, pageH - 5, { align: 'right' });
+        }
+
+        // ── 6. Sauvegarde ──────────────────────────────────────────────────────
+        const nomFichier = `Emargement_${nomComplet.replace(/\s+/g, '_')}_${MOIS_NOMS[mois]}_${annee}.pdf`;
+        doc.save(nomFichier);
+
+        showAlert('success', `✅ PDF généré : ${nomFichier}`);
+
+    } catch (err) {
+        console.error('Erreur génération PDF:', err);
+        showAlert('error', `Erreur lors de la génération PDF : ${err.message}`);
+    } finally {
+        btn.disabled  = false;
+        btn.innerHTML = '📄 Télécharger la feuille d\'émargement PDF';
+    }
+}
+
+// ── Utilitaires ───────────────────────────────────────────────────────────────
+function formatDateFr(dateStr) {
+    const d = new Date(dateStr + 'T12:00:00');
+    return d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function formatDateFrPdf(dateStr) {
+    const d    = new Date(dateStr + 'T12:00:00');
+    const jour = d.toLocaleDateString('fr-FR', { weekday: 'short' });
+    const date = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    return `${jour}\n${date}`;
+}
+
+function formatHeures(h) {
+    const heures = Math.floor(h);
+    const mins   = Math.round((h - heures) * 60);
+    return mins > 0 ? `${heures}h${String(mins).padStart(2,'0')}` : `${heures}h00`;
+}
+
+async function chargerImageBase64(src) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            const c = document.createElement('canvas');
+            c.width = img.naturalWidth; c.height = img.naturalHeight;
+            c.getContext('2d').drawImage(img, 0, 0);
+            resolve(c.toDataURL('image/png'));
+        };
+        img.onerror = () => reject(new Error('Image non trouvée'));
+        img.src = src;
+    });
+}
+
+function showAlert(type, msg) {
+    const zone = document.getElementById('alert-zone');
+    zone.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+}
+
+function clearAlert() {
+    document.getElementById('alert-zone').innerHTML = '';
+}
+</script>
+</body>
+</html>
