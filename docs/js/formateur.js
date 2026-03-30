@@ -326,7 +326,6 @@ function envoyerSignalement() {
 
     const typesLabels = {
         retard:           '⏰ Retard apprenant',
-        retard_formateur: '⏰ Retard formateur',
         absence:          '🚫 Absence non justifiée',
         observation:      '💬 Observation pédagogique',
         incident:         '⚠️ Incident'
@@ -349,6 +348,6 @@ ${message}
 Message envoyé depuis l'interface formateur Success Formation`
     );
 
-    window.location.href = `mailto:pedagogie@successformation.re?subject=${sujet}&body=${corps}`;
+    window.location.href = `mailto:a.successformation@gmail.com?subject=${sujet}&body=${corps}`;
     fermerModalSignalement();
 }
