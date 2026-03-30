@@ -184,7 +184,12 @@
             font-size: 1rem; display: inline-flex; align-items: center; gap: 8px;
         }
         .rapport-link-card a:hover { opacity: 0.75; }
-        .rapport-link-card p { font-size: 12px; color: #888; margin-top: 6px; }
+     .rapport-link-card p { font-size: 12px; color: #888; margin-top: 6px; }
+
+        /* === MODALE CODE ADMIN === */
+        .admin-code-input { width:100%; padding:14px 16px; margin-top:6px; border:2px solid #e0e0e0; border-radius:10px; font-size:26px; font-weight:700; text-align:center; letter-spacing:10px; box-sizing:border-box; color:#333; background:#f8f9fa; }
+        .admin-code-input:focus { border-color:#ce2a45; outline:none; background:white; }
+        .admin-code-error { color:#e74c3c; font-size:13px; font-weight:600; text-align:center; margin-top:10px; min-height:18px; }
     </style>
 </head>
 <body>
@@ -333,14 +338,29 @@
 
         <!-- ═══ LIEN RAPPORT MENSUEL ══════════════════════════════════════════ -->
         <div class="card rapport-link-card">
-            <a href="rapport.html">📋 Générer un récapitulatif mensuel d'émargement</a>
-            <p>Exporter la feuille de présence PDF d'un apprenant sur 1 mois</p>
+         <a href="#" onclick="ouvrirModalAdmin(); return false;">📋 Générer un récapitulatif mensuel d'émargement</a>
+            <p>Accès administrateur requis</p>   
         </div>
 
     </main>
 </div><!-- /container -->
 
-<!-- ═══ MODALE SIGNALEMENT ════════════════════════════════════════════════════ -->
+<!-- ═══ MODALE CODE ADMIN ═══════════════════════════════════════════════════ -->
+<div id="modal-admin" class="modal-overlay">
+    <div class="modal-box" style="max-width:320px;text-align:center;">
+        <div style="font-size:36px;margin-bottom:10px;">🔐</div>
+        <h3 style="margin-bottom:6px;">Accès administrateur</h3>
+        <p style="font-size:13px;color:#666;margin-bottom:14px;">Saisissez le code pour accéder au récapitulatif mensuel.</p>
+        <input type="password" id="admin-code-input" class="admin-code-input" maxlength="10" placeholder="••••" onkeydown="if(event.key==='Enter') validerCodeAdmin();">
+        <div id="admin-code-error" class="admin-code-error"></div>
+        <div class="modal-actions" style="margin-top:20px;">
+            <button class="btn-annuler" onclick="fermerModalAdmin()">Annuler</button>
+            <button class="btn-envoyer" onclick="validerCodeAdmin()">Valider</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODALE SIGNALEMENT
 <div id="modal-signalement" class="modal-overlay">
     <div class="modal-box">
         <h3>📢 Signalement pédagogique</h3>
@@ -388,6 +408,10 @@
 const API_RESOURCES = 'https://suivi-presence-success.vercel.app/api';
 const JOURS = { 0:null, 1:'LUNDI', 2:'MARDI', 3:'MERCREDI', 4:'JEUDI', 5:'VENDREDI', 6:null };
 let apprenantsActuels = [];
+
+function ouvrirModalAdmin(){document.getElementById('admin-code-input').value='';document.getElementById('admin-code-error').textContent='';document.getElementById('modal-admin').style.display='flex';setTimeout(()=>document.getElementById('admin-code-input').focus(),100);}
+function fermerModalAdmin(){document.getElementById('modal-admin').style.display='none';}
+function validerCodeAdmin(){if(document.getElementById('admin-code-input').value.trim()==='6202'){fermerModalAdmin();window.location.href='rapport.html';}else{document.getElementById('admin-code-error').textContent='Code incorrect. Veuillez réessayer.';document.getElementById('admin-code-input').value='';document.getElementById('admin-code-input').focus();}}
 
 function getJourActuel() {
     return JOURS[new Date().getDay()] || null;
