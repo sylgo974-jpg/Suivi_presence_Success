@@ -277,7 +277,9 @@
 <script>
 // ── Configuration ──────────────────────────────────────────────────────────────
 const API = 'https://suivi-presence-success.vercel.app/api';
-
+// AFC : Matin 8h00-12h00 = 4h | Standard : Matin 8h30-12h00 = 3.5h
+function isAFCFormation(f) { return (f||'').toUpperCase().trim().startsWith('AFC'); }
+function hMatinDuree(f)    { return isAFCFormation(f) ? 4.0 : 3.5; }
 let donnees        = null;   // Réponse brute de l'API
 let retardsData    = {};     // { 'YYYY-MM-DD': heuresEntier }
 
@@ -372,8 +374,9 @@ function afficherApercu() {
     tbody.innerHTML = '';
     donnees.attendances.forEach(day => {
         const retard   = retardsData[day.date] || 0;
-        const hMatin   = day.matin    ? 3.5 : 0;
-        const hAM      = day.apresMidi? 3.5 : 0;
+        const formation = (day.matin?.formation || day.apresMidi?.formation || '');
+const hMatin    = day.matin     ? hMatinDuree(formation) : 0;
+const hAM       = day.apresMidi ? 3.5 : 0;
         const hJour    = Math.max(0, hMatin + hAM - retard);
 
         totalHeures  += hJour;
@@ -457,7 +460,8 @@ function majRetard() {
         let totalHeures = 0;
         donnees.attendances.forEach(day => {
             const retard = retardsData[day.date] || 0;
-            const h      = Math.max(0, (day.matin ? 3.5 : 0) + (day.apresMidi ? 3.5 : 0) - retard);
+           const fm = (day.matin?.formation || day.apresMidi?.formation || '');
+const h  = Math.max(0, (day.matin ? hMatinDuree(fm) : 0) + (day.apresMidi ? 3.5 : 0) - retard);
             totalHeures += h;
 
             const retardCell   = document.getElementById(`retard-preview-${day.date}`);
@@ -545,8 +549,18 @@ async function genererPDF() {
 
         donnees.attendances.forEach(day => {
             const retard   = retardsData[day.date] || 0;
-            const hMatin   = day.matin    ? 3.5 : 0;
-            const hAM      = day.apresMidi? 3.5 : 0;
+            const hMatin = day.matin     ? hMatinDuree(formation) : 0;
+const hAM    = day.apresMidi ? 3.5 : 0;
+```
+*(La variable `formation` est déjà déclarée juste au-dessus dans cette boucle.)*
+
+**Remplacement 5** — bas de page PDF, remplacer :
+```
+Matin : 8h30 – 12h00 (3h30)   |   Après-midi : 13h00 – 16h30 (3h30)
+```
+par :
+```
+Matin AFC : 8h00-12h00 (4h00)  |  Matin standard : 8h30-12h00 (3h30)  |  Apres-midi : 13h00-16h30 (3h30)
             const hJour    = Math.max(0, hMatin + hAM - retard);
             grandTotalH   += hJour;
 
