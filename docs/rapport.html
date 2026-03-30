@@ -20,6 +20,7 @@
         }
         select:focus, input:focus { border-color:var(--sf-border); outline:none; }
         label { display:block; font-weight:600; color:var(--sf-slate); font-size:.88rem; margin-bottom:6px; }
+
         .btn-load {
             width:100%; padding:14px; margin-top:14px;
             background:linear-gradient(135deg,var(--sf-border) 0%,var(--sf-orange) 100%);
@@ -29,6 +30,7 @@
         }
         .btn-load:disabled { background:#cbd5e0; cursor:not-allowed; }
         .btn-load:hover:not(:disabled) { opacity:.9; }
+
         .btn-pdf {
             width:100%; padding:16px; margin-top:8px;
             background:linear-gradient(135deg,#1a7e4f 0%,var(--sf-success) 100%);
@@ -39,56 +41,78 @@
         .btn-pdf:disabled { background:#cbd5e0; cursor:not-allowed; }
         .btn-pdf:hover:not(:disabled) { opacity:.92; }
 
-        /* ── TABLE PREVIEW ───────────────────────────────────── */
+        /* ── TABLE PREVIEW ─────────────────────────────────────────── */
         .preview-table-wrap { overflow-x:auto; margin-top:8px; }
         table.preview { width:100%; border-collapse:collapse; font-size:13px; }
         table.preview th {
             background:var(--sf-border); color:#fff;
             padding:8px 10px; text-align:center; white-space:nowrap;
         }
-        table.preview td { padding:6px 8px; border-bottom:1px solid #eee; text-align:center; vertical-align:middle; }
+        table.preview td {
+            padding:6px 8px; border-bottom:1px solid #eee;
+            text-align:center; vertical-align:middle;
+        }
         table.preview tr:nth-child(even) td { background:#fafafa; }
-        .badge-present { background:#eafaf1; color:var(--sf-success); border-radius:6px; padding:2px 8px; font-weight:600; font-size:12px; }
-        .badge-absent  { background:#fdf0f0; color:var(--sf-border);  border-radius:6px; padding:2px 8px; font-weight:600; font-size:12px; }
-        .total-row td  { font-weight:700; background:#fff8f0 !important; border-top:3px solid var(--sf-orange); }
+        .total-row td { font-weight:700; background:#fff8f0 !important; border-top:3px solid var(--sf-orange); }
 
-        /* ── CELLULES SIGNATURE DANS LE TABLEAU PREVIEW ─────── */
+        /* ── SIGNATURES DANS LE TABLEAU ────────────────────────────── */
         .sig-cell {
-            display:flex; flex-direction:column; align-items:center;
-            gap:4px; min-width:80px;
+            display:flex; flex-direction:column; align-items:center; gap:3px;
         }
         .sig-cell img {
-            max-width:100px; max-height:40px;
+            max-width:110px; max-height:44px;
             border:1px solid #e0e0e0; border-radius:4px;
             background:#fff; padding:2px; object-fit:contain;
         }
-        .sig-cell .sig-label {
-            font-size:10px; color:#27ae60; font-weight:600;
-        }
-        .sig-absent-label { font-size:11px; color:#e74c3c; font-style:italic; }
+        .sig-cell .sig-label { font-size:10px; color:#27ae60; font-weight:600; }
+        .sig-absent-label    { font-size:11px; color:#e74c3c; font-style:italic; }
 
-        /* ── STATS ───────────────────────────────────────────── */
+        /* ── STATS ─────────────────────────────────────────────────── */
         .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
         .stat-card { background:#fdfaf7; border:2px solid var(--sf-bg); border-radius:10px; padding:12px; text-align:center; }
         .stat-card .val { font-size:1.5rem; font-weight:700; color:var(--sf-border); }
         .stat-card .lbl { font-size:.8rem; color:var(--sf-slate); }
+
+        /* ── RETARDS ───────────────────────────────────────────────── */
         .retard-entry { display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap; }
         .retard-entry input[type="date"] { flex:1; min-width:140px; }
         .retard-entry select { flex:0 0 100px; }
-        .btn-rm-retard { background:none; border:2px solid var(--sf-border); color:var(--sf-border); border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:700; font-size:16px; line-height:1; }
-        .btn-add-retard { background:#fff0f2; border:2px dashed var(--sf-border); color:var(--sf-border); border-radius:8px; padding:10px 16px; cursor:pointer; font-weight:600; font-size:14px; display:flex; align-items:center; gap:6px; margin-top:4px; }
-        .spinner { display:inline-block; width:18px; height:18px; border:3px solid rgba(255,255,255,.4); border-radius:50%; border-top-color:#fff; animation:spin .7s linear infinite; }
+        .btn-rm-retard {
+            background:none; border:2px solid var(--sf-border); color:var(--sf-border);
+            border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:700;
+            font-size:16px; line-height:1;
+        }
+        .btn-add-retard {
+            background:#fff0f2; border:2px dashed var(--sf-border); color:var(--sf-border);
+            border-radius:8px; padding:10px 16px; cursor:pointer; font-weight:600;
+            font-size:14px; display:flex; align-items:center; gap:6px; margin-top:4px;
+        }
+
+        /* ── DIVERS ────────────────────────────────────────────────── */
+        .spinner {
+            display:inline-block; width:18px; height:18px;
+            border:3px solid rgba(255,255,255,.4); border-radius:50%;
+            border-top-color:#fff; animation:spin .7s linear infinite;
+        }
         @keyframes spin { to { transform:rotate(360deg); } }
+
         .alert { padding:12px 16px; border-radius:10px; margin-bottom:12px; font-size:14px; display:flex; align-items:center; gap:8px; }
         .alert-info    { background:#e8f4fd; border-left:4px solid #3498db; color:#1a5c8a; }
         .alert-success { background:#eafaf1; border-left:4px solid var(--sf-success); color:#1a6040; }
         .alert-error   { background:#fdf0f0; border-left:4px solid var(--sf-border);  color:#7a1020; }
+
         header .logo { display:flex; align-items:center; gap:12px; justify-content:center; margin-bottom:8px; }
         header .logo img { max-width:120px; }
         header .logo span { font-size:1.3rem; font-weight:700; color:var(--sf-border); }
         header h1 { color:var(--sf-border); font-size:1.4rem; }
-        .nav-back { display:inline-flex; align-items:center; gap:6px; color:var(--sf-border); text-decoration:none; font-weight:600; margin-bottom:12px; font-size:14px; }
+
+        .nav-back {
+            display:inline-flex; align-items:center; gap:6px;
+            color:var(--sf-border); text-decoration:none;
+            font-weight:600; margin-bottom:12px; font-size:14px;
+        }
         .nav-back:hover { opacity:.75; }
+
         @media(max-width:480px) {
             .stats-grid { grid-template-columns:repeat(2,1fr); }
             .form-row .form-group { min-width:100%; }
@@ -109,25 +133,36 @@
         <p class="subtitle">Génération des feuilles de présence PDF</p>
     </header>
 
+    <!-- ═══ PARAMÈTRES ══════════════════════════════════════════════════════ -->
     <div class="card">
         <h2>⚙️ Paramètres du rapport</h2>
         <div id="alert-zone"></div>
+
         <div class="form-row">
             <div class="form-group">
                 abel for="sel-apprenant">👤 Apprenant(e) *</label>
-                <select id="sel-apprenant"><option value="">⏳ Chargement...</option></select>
+                <select id="sel-apprenant">
+                    <option value="">⏳ Chargement...</option>
+                </select>
             </div>
         </div>
+
         <div class="form-row" style="margin-top:12px;">
             <div class="form-group">
                 abel for="sel-mois">📅 Mois *</label>
                 <select id="sel-mois">
-                    <option value="1">Janvier</option><option value="2">Février</option>
-                    <option value="3">Mars</option><option value="4">Avril</option>
-                    <option value="5">Mai</option><option value="6">Juin</option>
-                    <option value="7">Juillet</option><option value="8">Août</option>
-                    <option value="9">Septembre</option><option value="10">Octobre</option>
-                    <option value="11">Novembre</option><option value="12">Décembre</option>
+                    <option value="1">Janvier</option>
+                    <option value="2">Février</option>
+                    <option value="3">Mars</option>
+                    <option value="4">Avril</option>
+                    <option value="5">Mai</option>
+                    <option value="6">Juin</option>
+                    <option value="7">Juillet</option>
+                    <option value="8">Août</option>
+                    <option value="9">Septembre</option>
+                    <option value="10">Octobre</option>
+                    <option value="11">Novembre</option>
+                    <option value="12">Décembre</option>
                 </select>
             </div>
             <div class="form-group">
@@ -135,20 +170,32 @@
                 <input type="number" id="sel-annee" min="2024" max="2030" step="1" value="">
             </div>
         </div>
-        <button class="btn-load" id="btn-charger" onclick="chargerDonnees()">🔍 Charger les données</button>
+
+        <button class="btn-load" id="btn-charger" onclick="chargerDonnees()">
+            🔍 Charger les données
+        </button>
     </div>
 
-    <!-- STATS -->
+    <!-- ═══ STATS ══════════════════════════════════════════════════════════ -->
     <div class="card hidden" id="stats-section">
         <h2>📊 Résumé</h2>
         <div class="stats-grid">
-            <div class="stat-card"><div class="val" id="stat-jours-present">—</div><div class="lbl">Jours présents</div></div>
-            <div class="stat-card"><div class="val" id="stat-demi-jour">—</div><div class="lbl">Demi-journées validées</div></div>
-            <div class="stat-card"><div class="val" id="stat-heures">—</div><div class="lbl">Heures totales</div></div>
+            <div class="stat-card">
+                <div class="val" id="stat-jours-present">—</div>
+                <div class="lbl">Jours présents</div>
+            </div>
+            <div class="stat-card">
+                <div class="val" id="stat-demi-jour">—</div>
+                <div class="lbl">Demi-journées validées</div>
+            </div>
+            <div class="stat-card">
+                <div class="val" id="stat-heures">—</div>
+                <div class="lbl">Heures totales</div>
+            </div>
         </div>
     </div>
 
-    <!-- APERÇU AVEC SIGNATURES -->
+    <!-- ═══ APERÇU AVEC SIGNATURES ════════════════════════════════════════ -->
     <div class="card hidden" id="preview-section">
         <h2>📄 Aperçu du récapitulatif</h2>
         <p style="font-size:13px;color:#666;margin-bottom:10px;">
@@ -156,31 +203,58 @@
         </p>
         <div class="preview-table-wrap">
             <table class="preview" id="preview-table">
-                <thead><tr>
-                    <th>Date</th>
-                    <th>Formation</th>
-                    <th>Sig. Matin<br><small style="font-weight:400;opacity:.85;">Apprenant</small></th>
-                    <th>Sig. Après-midi<br><small style="font-weight:400;opacity:.85;">Apprenant</small></th>
-                    <th>Sig. Formateur</th>
-                    <th>Formateur</th>
-                    <th>Retard</th>
-                    <th>Heures</th>
-                </tr></thead>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Formation</th>
+                        <th>Sig. Matin<br><small style="font-weight:400;opacity:.85;">Apprenant</small></th>
+                        <th>Sig. Après-midi<br><small style="font-weight:400;opacity:.85;">Apprenant</small></th>
+                        <th>Sig. Formateur</th>
+                        <th>Formateur</th>
+                        <th>Retard</th>
+                        <th>Heures</th>
+                    </tr>
+                </thead>
                 <tbody id="preview-tbody"></tbody>
-                <tfoot id="preview-tfoot"></tfoot>
+                <tfoot  id="preview-tfoot"></tfoot>
             </table>
         </div>
     </div>
 
-    <!-- RETARDS -->
+    <!-- ═══ RETARDS ════════════════════════════════════════════════════════ -->
     <div class="card hidden" id="retards-section">
         <h2>⏰ Retards (optionnel)</h2>
-        <p style="font-size:13px;color:#666;margin-bottom:14px;">Saisissez les retards à déduire du calcul des heures (granularité : 1 heure).</p>
+        <p style="font-size:13px;color:#666;margin-bottom:14px;">
+            Saisissez les retards à déduire du calcul des heures (granularité : 1 heure).
+        </p>
         <div id="retards-list"></div>
         <button class="btn-add-retard" onclick="ajouterRetard()">➕ Ajouter un retard</button>
     </div>
 
-    <!-- PDF -->
+    <!-- ═══ PDF ════════════════════════════════════════════════════════════ -->
     <div class="card hidden" id="pdf-section">
         <h2>📥 Générer le PDF</h2>
-        <div class
+        <div class="alert alert-info">
+            ℹ️ Format A4 paysage avec signatures.
+            AFC : Matin 8h00-12h00 (4h) — Standard : Matin 8h30-12h00 (3h30)
+        </div>
+        <button class="btn-pdf" id="btn-pdf" onclick="genererPDF()">
+            📄 Télécharger la feuille d'émargement PDF
+        </button>
+    </div>
+
+</div><!-- /container -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════════════════
+const API = 'https://suivi-presence-success.vercel.app/api';
+
+function isAFCFormation(f) { return (f || '').toUpperCase().trim().startsWith('AFC'); }
+function hMatinDuree(f)    { return isAFCFormation(f) ? 4.0 : 3.5; }
+
+let donnees     = null;
+let retardsData = {};
+
+const MOIS_NOMS = 
