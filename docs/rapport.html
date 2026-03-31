@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Récapitulatif Mensuel – Success Formation</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <style>
@@ -41,7 +41,6 @@
         .btn-pdf:disabled { background:#cbd5e0; cursor:not-allowed; }
         .btn-pdf:hover:not(:disabled) { opacity:.92; }
 
-        /* ── TABLE PREVIEW ─────────────────────────────── */
         .preview-table-wrap { overflow-x:auto; margin-top:8px; }
         table.preview { width:100%; border-collapse:collapse; font-size:13px; }
         table.preview th {
@@ -58,7 +57,6 @@
             border-top:3px solid var(--sf-orange);
         }
 
-        /* ── SIGNATURES PREVIEW ────────────────────────── */
         .sig-cell {
             display:flex; flex-direction:column;
             align-items:center; gap:3px; min-width:80px;
@@ -71,7 +69,6 @@
         .sig-cell .sig-label { font-size:10px; color:#27ae60; font-weight:600; }
         .sig-absent-label    { font-size:11px; color:#e74c3c; font-style:italic; }
 
-        /* ── STATS ─────────────────────────────────────── */
         .stats-grid {
             display:grid; grid-template-columns:repeat(3,1fr);
             gap:10px; margin-bottom:16px;
@@ -83,13 +80,12 @@
         .stat-card .val { font-size:1.5rem; font-weight:700; color:var(--sf-border); }
         .stat-card .lbl { font-size:.8rem; color:var(--sf-slate); }
 
-        /* ── RETARDS ───────────────────────────────────── */
         .retard-entry {
             display:flex; gap:8px; align-items:center;
             margin-bottom:8px; flex-wrap:wrap;
         }
         .retard-entry input[type="date"] { flex:1; min-width:140px; }
-        .retard-entry select             { flex:0 0 100px; }
+        .retard-entry select             { flex:0 0 130px; }
         .btn-rm-retard {
             background:none; border:2px solid var(--sf-border);
             color:var(--sf-border); border-radius:8px;
@@ -103,7 +99,6 @@
             display:flex; align-items:center; gap:6px; margin-top:4px;
         }
 
-        /* ── DIVERS ────────────────────────────────────── */
         .spinner {
             display:inline-block; width:18px; height:18px;
             border:3px solid rgba(255,255,255,.4); border-radius:50%;
@@ -134,8 +129,6 @@
             font-weight:600; margin-bottom:12px; font-size:14px;
         }
         .nav-back:hover { opacity:.75; }
-
-        /* ── HIDDEN ────────────────────────────────────── */
         .hidden { display:none !important; }
 
         @media(max-width:480px) {
@@ -250,7 +243,7 @@
     <div class="card hidden" id="retards-section">
         <h2>⏰ Retards (optionnel)</h2>
         <p style="font-size:13px;color:#666;margin-bottom:14px;">
-            Saisissez les retards à déduire du calcul des heures (granularité : 1 heure).
+            Saisissez les retards à déduire du calcul des heures.
         </p>
         <div id="retards-list"></div>
         <button class="btn-add-retard" onclick="ajouterRetard()">➕ Ajouter un retard</button>
@@ -260,81 +253,122 @@
     <div class="card hidden" id="pdf-section">
         <h2>📥 Générer le PDF</h2>
         <div class="alert alert-info">
-            ℹ️ Format A4 paysage avec signatures.
-            AFC : Matin 8h00-12h00 (4h) — Standard : Matin 8h30-12h00 (3h30)
+            ℹ️ Format A4 paysage avec signatures intégrées.<br>
+            AFS/AFC : Matin 8h00-12h00 (4h) — Standard : Matin 8h30-12h00 (3h30) — AM : 13h00-16h30 (3h30)
         </div>
         <button class="btn-pdf" id="btn-pdf" onclick="genererPDF()">
             📄 Télécharger la feuille d'émargement PDF
         </button>
     </div>
 
-</div><!-- /container -->
+</div>
 
 <script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   RAPPORT.HTML — CORRIGÉ
+   FIX #1 : Endpoint /api/rapport/apprenants (au lieu de /api/apprenants)
+   FIX #2 : Parsing de la réponse (tableau de chaînes, pas d'objets)
+   FIX #3 : Endpoint /api/rapport/mensuel (au lieu de /api/presences)
+   FIX #4 : Structure de données attendances[].matin / .apresMidi
+   FIX #5 : Signatures base64 correctement extraites et affichées
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 const API = 'https://suivi-presence-success.vercel.app/api';
-
-function isAFCFormation(f) { return (f || '').toUpperCase().trim().startsWith('AFC'); }
-function hMatinDuree(f)    { return isAFCFormation(f) ? 4.0 : 3.5; }
-
-let donnees     = null;
-let retardsData = {};
 
 const MOIS_NOMS = [
     '','Janvier','Février','Mars','Avril','Mai','Juin',
     'Juillet','Août','Septembre','Octobre','Novembre','Décembre'
 ];
 
-/* ── ALERTES ─────────────────────────────────────────── */
-function showAlert(msg, type='info') {
+let donnees     = null;   // { apprenant, mois, annee, attendances[] }
+let retardsData = {};     // { 'YYYY-MM-DD_matin': heures, ... }
+
+/* ── Détection AFS/AFC ─────────────────────────────────── */
+function isAFS(formationStr) {
+    const f = (formationStr || '').toUpperCase().trim();
+    return f.indexOf('AFS') >= 0 || f.indexOf('AFC') >= 0;
+}
+function hMatinDuree(formationStr) { return isAFS(formationStr) ? 4.0 : 3.5; }
+
+/* ── Conversion base64 → data URI ──────────────────────── */
+function toDataUri(sig) {
+    if (!sig || typeof sig !== 'string' || sig.trim() === '') return null;
+    if (sig.startsWith('data:image')) return sig;
+    return 'data:image/png;base64,' + sig.trim();
+}
+
+/* ── Alertes ───────────────────────────────────────────── */
+function showAlert(msg, type) {
     document.getElementById('alert-zone').innerHTML =
-        `<div class="alert alert-${type}">${msg}</div>`;
+        '<div class="alert alert-' + type + '">' + msg + '</div>';
 }
 function clearAlert() { document.getElementById('alert-zone').innerHTML = ''; }
 
-/* ── CHARGEMENT DES APPRENANTS ───────────────────────── */
+/* ═══════════════════════════════════════════════════════════
+   FIX #1 + #2 : Chargement des apprenants
+   Endpoint : GET /api/rapport/apprenants
+   Réponse  : ["NOM Prénom", "NOM2 Prénom2", ...]
+   ═══════════════════════════════════════════════════════════ */
 async function chargerApprenants() {
     try {
-        const r  = await fetch(`${API}/apprenants`);
-        const js = await r.json();
+        const r   = await fetch(API + '/rapport/apprenants');
+        if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
+        const liste = await r.json();
+
         const sel = document.getElementById('sel-apprenant');
-        sel.innerHTML = '<option value="">-- Choisir un apprenant --</option>';
-        (js.apprenants || js).forEach(a => {
-            const opt = document.createElement('option');
-            opt.value = a._id || a.id;
-            opt.textContent = `${a.prenom || ''} ${a.nom || ''}`.trim();
+        sel.innerHTML = '<option value="">-- Choisir un(e) apprenant(e) --</option>';
+
+        if (!Array.isArray(liste) || liste.length === 0) {
+            sel.innerHTML = '<option value="">Aucun apprenant trouvé</option>';
+            return;
+        }
+
+        liste.forEach(function(nom) {
+            var opt = document.createElement('option');
+            opt.value       = nom;         // La valeur = le nom complet
+            opt.textContent = nom;
             sel.appendChild(opt);
         });
-        const now = new Date();
+
+        var now = new Date();
         document.getElementById('sel-annee').value = now.getFullYear();
         document.getElementById('sel-mois').value  = now.getMonth() + 1;
+
     } catch(e) {
         showAlert('Impossible de charger la liste des apprenants : ' + e.message, 'error');
+        console.error('chargerApprenants:', e);
     }
 }
 
-/* ── CHARGER LES DONNÉES DU MOIS ─────────────────────── */
+/* ═══════════════════════════════════════════════════════════
+   FIX #3 + #4 : Chargement des données mensuelles
+   Endpoint : GET /api/rapport/mensuel?nomComplet=...&mois=...&annee=...
+   Réponse  : { apprenant:{nomComplet}, mois, annee, attendances:[ {date, matin:{...}, apresMidi:{...}} ] }
+   ═══════════════════════════════════════════════════════════ */
 async function chargerDonnees() {
     clearAlert();
-    const appId = document.getElementById('sel-apprenant').value;
-    const mois  = document.getElementById('sel-mois').value;
-    const annee = document.getElementById('sel-annee').value;
+    var nomComplet = document.getElementById('sel-apprenant').value;
+    var mois       = document.getElementById('sel-mois').value;
+    var annee      = document.getElementById('sel-annee').value;
 
-    if (!appId) { showAlert('Veuillez sélectionner un apprenant.', 'error'); return; }
+    if (!nomComplet) { showAlert('Veuillez sélectionner un(e) apprenant(e).', 'error'); return; }
     if (!mois || !annee) { showAlert('Veuillez sélectionner un mois et une année.', 'error'); return; }
 
-    const btn = document.getElementById('btn-charger');
-    btn.disabled = true;
+    var btn = document.getElementById('btn-charger');
+    btn.disabled  = true;
     btn.innerHTML = '<span class="spinner"></span> Chargement...';
 
     try {
-        const r  = await fetch(`${API}/presences?apprenant=${appId}&mois=${mois}&annee=${annee}`);
+        var url = API + '/rapport/mensuel?nomComplet=' + encodeURIComponent(nomComplet)
+                + '&mois=' + mois + '&annee=' + annee;
+        var r = await fetch(url);
         if (!r.ok) throw new Error('Réponse serveur : ' + r.status);
         donnees = await r.json();
 
-        if (!donnees || !donnees.length) {
+        if (!donnees || !donnees.attendances || donnees.attendances.length === 0) {
             showAlert('Aucune donnée de présence trouvée pour cette période.', 'info');
             ['stats-section','preview-section','retards-section','pdf-section']
-                .forEach(id => document.getElementById(id).classList.add('hidden'));
+                .forEach(function(id) { document.getElementById(id).classList.add('hidden'); });
             return;
         }
 
@@ -342,235 +376,388 @@ async function chargerDonnees() {
         afficherStats();
         afficherApercu();
         ['stats-section','preview-section','retards-section','pdf-section']
-            .forEach(id => document.getElementById(id).classList.remove('hidden'));
-        showAlert(`✅ ${donnees.length} enregistrement(s) chargé(s).`, 'success');
+            .forEach(function(id) { document.getElementById(id).classList.remove('hidden'); });
+        showAlert('✅ ' + donnees.attendances.length + ' jour(s) de présence chargé(s).', 'success');
+
     } catch(e) {
         showAlert('Erreur lors du chargement : ' + e.message, 'error');
+        console.error('chargerDonnees:', e);
     } finally {
-        btn.disabled = false;
+        btn.disabled  = false;
         btn.innerHTML = '🔍 Charger les données';
     }
 }
 
-/* ── STATS ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════
+   FIX #4 : Calcul des heures (structure matin/apresMidi)
+   ═══════════════════════════════════════════════════════════ */
+function calcHeuresJour(day) {
+    var formStr = (day.matin && day.matin.formation) || (day.apresMidi && day.apresMidi.formation) || '';
+    var hM      = hMatinDuree(formStr);
+    var hAM     = 3.5;
+    var total   = 0;
+
+    var dateStr = (day.date || '').slice(0, 10);
+    var retM  = retardsData[dateStr + '_matin']      || 0;
+    var retAM = retardsData[dateStr + '_apres-midi']  || 0;
+
+    if (day.matin)     total += Math.max(0, hM  - retM);
+    if (day.apresMidi) total += Math.max(0, hAM - retAM);
+    return total;
+}
+
+/* ── Stats ─────────────────────────────────────────────── */
 function afficherStats() {
-    let joursPresents = 0, demiJours = 0, heuresTotal = 0;
-    donnees.forEach(j => {
-        const hasMatin = j.signatureMatin || j.sig_matin;
-        const hasAM    = j.signatureAM    || j.sig_am;
-        if (hasMatin || hasAM) joursPresents++;
-        if (hasMatin) demiJours++;
-        if (hasAM)    demiJours++;
-        heuresTotal += calcHeures(j);
+    var joursPresents = 0, demiJours = 0, heuresTotal = 0;
+
+    donnees.attendances.forEach(function(day) {
+        if (day.matin || day.apresMidi) joursPresents++;
+        if (day.matin)     demiJours++;
+        if (day.apresMidi) demiJours++;
+        heuresTotal += calcHeuresJour(day);
     });
+
     document.getElementById('stat-jours-present').textContent = joursPresents;
     document.getElementById('stat-demi-jour').textContent      = demiJours;
     document.getElementById('stat-heures').textContent         = heuresTotal.toFixed(1) + 'h';
 }
 
-function calcHeures(j) {
-    const f      = j.formation || j.nomFormation || '';
-    const hMatin = hMatinDuree(f);
-    const hAM    = 3.5;
-    let h = 0;
-    if (j.signatureMatin || j.sig_matin) h += hMatin;
-    if (j.signatureAM    || j.sig_am)    h += hAM;
-    const dateStr = (j.date || '').slice(0,10);
-    if (retardsData[dateStr]) h -= retardsData[dateStr];
-    return Math.max(0, h);
-}
-
-/* ── APERÇU TABLE ────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════
+   FIX #5 : Aperçu tableau avec signatures visuelles
+   Extraction des signatures depuis la structure matin/apresMidi
+   ═══════════════════════════════════════════════════════════ */
 function afficherApercu() {
-    const tbody = document.getElementById('preview-tbody');
-    const tfoot = document.getElementById('preview-tfoot');
+    var tbody = document.getElementById('preview-tbody');
+    var tfoot = document.getElementById('preview-tfoot');
     tbody.innerHTML = '';
-    let totalH = 0;
+    var totalH = 0;
 
-    donnees.forEach(j => {
-        const dateStr  = (j.date || '').slice(0,10);
-        const [y,m,d]  = dateStr.split('-');
-        const dateAff  = d && m && y ? `${d}/${m}/${y}` : dateStr;
-        const f        = j.formation || j.nomFormation || '—';
-        const sigMatin = j.signatureMatin || j.sig_matin || null;
-        const sigAM    = j.signatureAM    || j.sig_am    || null;
-        const sigForm  = j.signatureFormateur || j.sig_formateur || null;
-        const formNom  = j.formateur || j.nomFormateur || '—';
-        const retard   = retardsData[dateStr] || 0;
-        const heures   = calcHeures(j);
+    donnees.attendances.forEach(function(day) {
+        var dateStr = (day.date || '').slice(0, 10);
+        var parts   = dateStr.split('-');
+        var dateAff = parts[2] && parts[1] && parts[0]
+                    ? parts[2] + '/' + parts[1] + '/' + parts[0] : dateStr;
+
+        var formation = (day.matin && day.matin.formation)
+                      ? day.matin.formation
+                      : (day.apresMidi && day.apresMidi.formation)
+                        ? day.apresMidi.formation : '—';
+
+        var formNom = '';
+        var fN = (day.matin && day.matin.formateurNom)    || (day.apresMidi && day.apresMidi.formateurNom)    || '';
+        var fP = (day.matin && day.matin.formateurPrenom) || (day.apresMidi && day.apresMidi.formateurPrenom) || '';
+        formNom = (fP + ' ' + fN).trim() || '—';
+
+        // Signatures apprenant (Signatures.J)
+        var sigAppMatin = toDataUri(day.matin     && day.matin.signatureApprenant     ? day.matin.signatureApprenant     : null);
+        var sigAppAM    = toDataUri(day.apresMidi && day.apresMidi.signatureApprenant ? day.apresMidi.signatureApprenant : null);
+
+        // Signature formateur (Sessions.J/K)
+        var sigFormRaw = (day.matin    && day.matin.signatureFormateur)
+                       ? day.matin.signatureFormateur
+                       : (day.apresMidi && day.apresMidi.signatureFormateur)
+                         ? day.apresMidi.signatureFormateur
+                         : (day.matin    && day.matin.signatureFormateurMatin)
+                           ? day.matin.signatureFormateurMatin
+                           : (day.apresMidi && day.apresMidi.signatureFormateurApresMidi)
+                             ? day.apresMidi.signatureFormateurApresMidi
+                             : null;
+        var sigForm = toDataUri(sigFormRaw);
+
+        var retM  = retardsData[dateStr + '_matin']     || 0;
+        var retAM = retardsData[dateStr + '_apres-midi'] || 0;
+        var retTotal = retM + retAM;
+        var heures = calcHeuresJour(day);
         totalH += heures;
 
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${dateAff}</td>
-            <td style="text-align:left;max-width:160px;">${f}</td>
-            <td>${sigCell(sigMatin)}</td>
-            <td>${sigCell(sigAM)}</td>
-            <td>${sigCell(sigForm)}</td>
-            <td style="font-size:12px;">${formNom}</td>
-            <td>${retard ? '−'+retard+'h' : '—'}</td>
-            <td><strong>${heures.toFixed(1)}h</strong></td>
-        `;
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+            '<td>' + dateAff + '</td>' +
+            '<td style="text-align:left;max-width:160px;">' + formation + (isAFS(formation) ? ' ★' : '') + '</td>' +
+            '<td>' + sigCell(sigAppMatin, day.matin) + '</td>' +
+            '<td>' + sigCell(sigAppAM, day.apresMidi) + '</td>' +
+            '<td>' + sigCell(sigForm, true) + '</td>' +
+            '<td style="font-size:12px;">' + formNom + '</td>' +
+            '<td>' + (retTotal > 0 ? '−' + retTotal + 'h' : '—') + '</td>' +
+            '<td><strong>' + heures.toFixed(1) + 'h</strong></td>';
         tbody.appendChild(tr);
     });
 
-    tfoot.innerHTML = `
-        <tr class="total-row">
-            <td colspan="7" style="text-align:right;padding-right:16px;">
-                🕐 Total heures du mois :
-            </td>
-            <td><strong>${totalH.toFixed(1)}h</strong></td>
-        </tr>`;
+    tfoot.innerHTML =
+        '<tr class="total-row">' +
+        '<td colspan="7" style="text-align:right;padding-right:16px;">🕐 Total heures du mois :</td>' +
+        '<td><strong>' + totalH.toFixed(1) + 'h</strong></td>' +
+        '</tr>';
 }
 
-function sigCell(dataUrl) {
+function sigCell(dataUrl, presence) {
     if (dataUrl) {
-        return `<div class="sig-cell">
-            <img src="${dataUrl}" alt="Signature">
-            <span class="sig-label">✓ Signé</span>
-        </div>`;
+        return '<div class="sig-cell">' +
+               '<img src="' + dataUrl + '" alt="Signature">' +
+               '<span class="sig-label">✓ Signé</span></div>';
+    }
+    if (presence) {
+        return '<span class="sig-absent-label">✓ Présent (pas de sig.)</span>';
     }
     return '<span class="sig-absent-label">Absent</span>';
 }
 
-/* ── RETARDS ─────────────────────────────────────────── */
-let retardIdx = 0;
+/* ── Retards ───────────────────────────────────────────── */
+var retardIdx = 0;
 function ajouterRetard() {
-    const id  = 'retard-' + retardIdx++;
-    const div = document.createElement('div');
+    var id  = 'retard-' + retardIdx++;
+    var div = document.createElement('div');
     div.className = 'retard-entry';
     div.id = id;
 
-    const today = new Date().toISOString().slice(0,10);
-    div.innerHTML = `
-        <input type="date" id="${id}-date" value="${today}">
-        <select id="${id}-h">
-            <option value="1">1h</option>
-            <option value="2">2h</option>
-            <option value="3">3h</option>
-        </select>
-        <button class="btn-rm-retard" onclick="supprimerRetard('${id}')">✕</button>
-    `;
+    var today = new Date().toISOString().slice(0, 10);
+    div.innerHTML =
+        '<input type="date" id="' + id + '-date" value="' + today + '">' +
+        '<select id="' + id + '-cren">' +
+        '  <option value="matin">Matin</option>' +
+        '  <option value="apres-midi">Après-midi</option>' +
+        '</select>' +
+        '<select id="' + id + '-h">' +
+        '  <option value="1">1h</option>' +
+        '  <option value="2">2h</option>' +
+        '  <option value="3">3h</option>' +
+        '</select>' +
+        '<button class="btn-rm-retard" onclick="supprimerRetard(\'' + id + '\')">✕</button>';
     document.getElementById('retards-list').appendChild(div);
 
     div.querySelector('input[type=date]').addEventListener('change', mettreAJourRetards);
-    div.querySelector('select').addEventListener('change', mettreAJourRetards);
+    div.querySelectorAll('select').forEach(function(s) { s.addEventListener('change', mettreAJourRetards); });
 }
 
 function supprimerRetard(id) {
-    document.getElementById(id)?.remove();
+    var el = document.getElementById(id);
+    if (el) el.remove();
     mettreAJourRetards();
 }
 
 function mettreAJourRetards() {
     retardsData = {};
-    document.querySelectorAll('.retard-entry').forEach(div => {
-        const dateVal = div.querySelector('input[type=date]')?.value;
-        const hVal    = parseFloat(div.querySelector('select')?.value || 0);
-        if (dateVal && hVal) retardsData[dateVal] = (retardsData[dateVal] || 0) + hVal;
+    document.querySelectorAll('.retard-entry').forEach(function(div) {
+        var dateVal = div.querySelector('input[type=date]') ? div.querySelector('input[type=date]').value : '';
+        var crenVal = div.querySelectorAll('select')[0] ? div.querySelectorAll('select')[0].value : 'matin';
+        var hVal    = parseFloat(div.querySelectorAll('select')[1] ? div.querySelectorAll('select')[1].value : 0);
+        if (dateVal && hVal) {
+            var key = dateVal + '_' + crenVal;
+            retardsData[key] = (retardsData[key] || 0) + hVal;
+        }
     });
     afficherApercu();
     afficherStats();
 }
 
-/* ── GÉNÉRATION PDF ──────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════
+   GÉNÉRATION PDF avec signatures intégrées en images
+   ═══════════════════════════════════════════════════════════ */
 async function genererPDF() {
-    if (!donnees || !donnees.length) { showAlert('Aucune donnée à exporter.', 'error'); return; }
+    if (!donnees || !donnees.attendances || donnees.attendances.length === 0) {
+        showAlert('Aucune donnée à exporter.', 'error'); return;
+    }
 
-    const btn = document.getElementById('btn-pdf');
-    btn.disabled = true;
+    var btn = document.getElementById('btn-pdf');
+    btn.disabled  = true;
     btn.innerHTML = '<span class="spinner"></span> Génération...';
 
     try {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+        var jsPDF = window.jspdf.jsPDF;
+        var doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-        const moisVal  = parseInt(document.getElementById('sel-mois').value);
-        const annee    = document.getElementById('sel-annee').value;
-        const appSel   = document.getElementById('sel-apprenant');
-        const appNom   = appSel.options[appSel.selectedIndex]?.text || 'Apprenant';
-        const titre    = `Feuille d'émargement – ${appNom} – ${MOIS_NOMS[moisVal]} ${annee}`;
+        var moisVal    = parseInt(document.getElementById('sel-mois').value);
+        var annee      = document.getElementById('sel-annee').value;
+        var nomComplet = donnees.apprenant ? donnees.apprenant.nomComplet : document.getElementById('sel-apprenant').value;
 
-        doc.setFontSize(14); doc.setFont('helvetica','bold');
-        doc.text('Success Formation', 14, 14);
-        doc.setFontSize(11); doc.setFont('helvetica','normal');
-        doc.text(titre, 14, 22);
-        doc.setDrawColor(206,42,69); doc.setLineWidth(0.5);
-        doc.line(14, 25, 283, 25);
+        var pageW = doc.internal.pageSize.getWidth();
+        var pageH = doc.internal.pageSize.getHeight();
+        var marg  = 10;
 
-        const rows = [];
-        let totalH = 0;
-        donnees.forEach(j => {
-            const dateStr = (j.date || '').slice(0,10);
-            const [y,m,d] = dateStr.split('-');
-            const dateAff = d && m && y ? `${d}/${m}/${y}` : dateStr;
-            const f       = j.formation || j.nomFormation || '—';
-            const formNom = j.formateur  || j.nomFormateur || '—';
-            const retard  = retardsData[dateStr] || 0;
-            const heures  = calcHeures(j);
-            totalH += heures;
+        // En-tête
+        doc.setFont('helvetica', 'bold').setFontSize(16).setTextColor(206, 42, 69);
+        doc.text("FEUILLE D'EMARGEMENT MENSUELLE", pageW / 2, 14, { align: 'center' });
+        doc.setFontSize(11).setTextColor(92, 100, 107);
+        doc.text('Période : ' + MOIS_NOMS[moisVal] + ' ' + annee, pageW / 2, 21, { align: 'center' });
+        doc.setFontSize(11).setTextColor(0, 0, 0).setFont('helvetica', 'normal');
+        doc.text('Apprenant(e) : ', marg, 29);
+        doc.setFont('helvetica', 'bold');
+        doc.text(nomComplet, marg + 32, 29);
+        doc.setDrawColor(206, 42, 69).setLineWidth(0.6);
+        doc.line(marg, 32, pageW - marg, 32);
 
-            rows.push([
-                dateAff, f,
-                (j.signatureMatin || j.sig_matin) ? '✓' : '—',
-                (j.signatureAM    || j.sig_am)    ? '✓' : '—',
-                (j.signatureFormateur || j.sig_formateur) ? '✓' : '—',
-                formNom,
-                retard ? '−'+retard+'h' : '—',
-                heures.toFixed(1)+'h'
+        var C_SIG_APP_MAT = 2, C_SIG_APP_AM = 3, C_SIG_FORM = 4;
+        var colW     = [22, 28, 48, 48, 48, 38, 14, 17];
+        var imageMap = {};
+        var tableBody = [];
+        var grandTotal = 0;
+        var rowIdx = 0;
+
+        donnees.attendances.forEach(function(day) {
+            var formStr    = (day.matin && day.matin.formation) || (day.apresMidi && day.apresMidi.formation) || '';
+            var isAFSDay   = isAFS(formStr);
+            var dureeMatin = isAFSDay ? 4 : 3.5;
+            var dateStr    = (day.date || '').slice(0, 10);
+
+            var retM  = retardsData[dateStr + '_matin']     || 0;
+            var retAM = retardsData[dateStr + '_apres-midi'] || 0;
+            var hMatin = day.matin     ? Math.max(0, dureeMatin - retM) : 0;
+            var hAM    = day.apresMidi ? Math.max(0, 3.5 - retAM)      : 0;
+            var hJour  = hMatin + hAM;
+            grandTotal += hJour;
+
+            var fN = ((day.matin && day.matin.formateurNom)    || (day.apresMidi && day.apresMidi.formateurNom)    || '').trim();
+            var fP = ((day.matin && day.matin.formateurPrenom) || (day.apresMidi && day.apresMidi.formateurPrenom) || '').trim();
+
+            var sigAppMat = toDataUri(day.matin     && day.matin.signatureApprenant     ? day.matin.signatureApprenant     : null);
+            var sigAppAM  = toDataUri(day.apresMidi && day.apresMidi.signatureApprenant ? day.apresMidi.signatureApprenant : null);
+            var sigFormRaw = (day.matin    && day.matin.signatureFormateur)    ? day.matin.signatureFormateur
+                           : (day.apresMidi && day.apresMidi.signatureFormateur) ? day.apresMidi.signatureFormateur
+                           : (day.matin    && day.matin.signatureFormateurMatin) ? day.matin.signatureFormateurMatin
+                           : (day.apresMidi && day.apresMidi.signatureFormateurApresMidi) ? day.apresMidi.signatureFormateurApresMidi
+                           : null;
+            var sigForm = toDataUri(sigFormRaw);
+
+            if (sigAppMat) imageMap[rowIdx + '-' + C_SIG_APP_MAT] = sigAppMat;
+            if (sigAppAM)  imageMap[rowIdx + '-' + C_SIG_APP_AM]  = sigAppAM;
+            if (sigForm)   imageMap[rowIdx + '-' + C_SIG_FORM]    = sigForm;
+
+            var retTotal = retM + retAM;
+            var cs = { valign: 'middle', halign: 'center', cellPadding: 2 };
+
+            var d = new Date(dateStr + 'T12:00:00');
+            var dateAff = d.toLocaleDateString('fr-FR', { weekday: 'short' }) + '\n' +
+                          d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+
+            tableBody.push([
+                { content: dateAff, styles: Object.assign({}, cs, { halign: 'left', fontStyle: 'bold' }) },
+                { content: formStr + (isAFSDay ? ' *' : ''),
+                  styles: Object.assign({}, cs, { fontSize: 8, textColor: isAFSDay ? [26,115,232] : [0,0,0] }) },
+                { content: sigAppMat ? '' : (day.matin ? 'Présent' : 'Absent'),
+                  styles: Object.assign({}, cs, {
+                      textColor: day.matin ? (sigAppMat ? [255,255,255] : [26,154,52]) : [200,50,50],
+                      fillColor: day.matin ? [255,255,255] : [253,240,240],
+                      fontStyle: 'italic', fontSize: 9 }) },
+                { content: sigAppAM ? '' : (day.apresMidi ? 'Présent' : 'Absent'),
+                  styles: Object.assign({}, cs, {
+                      textColor: day.apresMidi ? (sigAppAM ? [255,255,255] : [26,154,52]) : [200,50,50],
+                      fillColor: day.apresMidi ? [255,255,255] : [253,240,240],
+                      fontStyle: 'italic', fontSize: 9 }) },
+                { content: sigForm ? '' : 'Non signé',
+                  styles: Object.assign({}, cs, {
+                      textColor: sigForm ? [255,255,255] : [160,60,60],
+                      fillColor: sigForm ? [255,255,255] : [253,240,240],
+                      fontStyle: 'italic', fontSize: 9 }) },
+                { content: (fP + '\n' + fN).trim() || '-', styles: Object.assign({}, cs, { fontSize: 8 }) },
+                { content: retTotal > 0 ? '-' + retTotal + 'h' : '-',
+                  styles: Object.assign({}, cs, {
+                      textColor: retTotal > 0 ? [180,60,30] : [100,100,100],
+                      fontStyle: retTotal > 0 ? 'bold' : 'normal' }) },
+                { content: formatHeures(hJour), styles: Object.assign({}, cs, { fontStyle: 'bold', fontSize: 11 }) }
             ]);
+            rowIdx++;
         });
-        rows.push(['','','','','','','TOTAL', totalH.toFixed(1)+'h']);
+
+        // Ligne TOTAL
+        tableBody.push([
+            { content: 'TOTAL PERIODE', colSpan: 6,
+              styles: { halign: 'right', fontStyle: 'bold', fillColor: [241,215,188], textColor: [206,42,69], fontSize: 10 } },
+            { content: '-', styles: { halign: 'center', fontStyle: 'bold', fillColor: [241,215,188] } },
+            { content: formatHeures(grandTotal),
+              styles: { halign: 'center', fontStyle: 'bold', fillColor: [241,215,188], textColor: [206,42,69], fontSize: 12 } }
+        ]);
+
+        var nbAttendances = donnees.attendances.length;
 
         doc.autoTable({
-            startY: 28,
-            head: [['Date','Formation','Sig. Matin','Sig. AM','Sig. Form.','Formateur','Retard','Heures']],
-            body: rows,
-            theme: 'grid',
-            headStyles: { fillColor:[206,42,69], textColor:255, fontStyle:'bold', halign:'center' },
-            bodyStyles: { fontSize:9, halign:'center' },
-            columnStyles: { 1:{halign:'left'}, 5:{halign:'left'} },
-            alternateRowStyles: { fillColor:[250,250,250] },
-            didParseCell: (data) => {
-                if (data.row.index === rows.length - 1) {
-                    data.cell.styles.fontStyle = 'bold';
-                    data.cell.styles.fillColor = [255,248,240];
+            startY: 35,
+            margin: { left: marg, right: marg },
+            head: [[
+                { content: 'Date',                        styles: { halign: 'center' } },
+                { content: 'Formation',                   styles: { halign: 'center' } },
+                { content: 'Sig. Apprenant\nMatin',       styles: { halign: 'center' } },
+                { content: 'Sig. Apprenant\nAprès-midi',  styles: { halign: 'center' } },
+                { content: 'Sig. Formateur',              styles: { halign: 'center' } },
+                { content: 'Formateur',                   styles: { halign: 'center' } },
+                { content: 'Retard',                      styles: { halign: 'center' } },
+                { content: 'Heures',                      styles: { halign: 'center' } }
+            ]],
+            body: tableBody,
+            columnStyles: {
+                0: { cellWidth: colW[0] },
+                1: { cellWidth: colW[1] },
+                2: { cellWidth: colW[2], minCellHeight: 22 },
+                3: { cellWidth: colW[3], minCellHeight: 22 },
+                4: { cellWidth: colW[4], minCellHeight: 22 },
+                5: { cellWidth: colW[5] },
+                6: { cellWidth: colW[6] },
+                7: { cellWidth: colW[7] }
+            },
+            headStyles: {
+                fillColor: [206, 42, 69], textColor: [255, 255, 255],
+                fontStyle: 'bold', fontSize: 9, halign: 'center', valign: 'middle', cellPadding: 4
+            },
+            alternateRowStyles: { fillColor: [252, 249, 246] },
+            rowPageBreak: 'avoid',
+            didDrawCell: function(data) {
+                var sigCols = [C_SIG_APP_MAT, C_SIG_APP_AM, C_SIG_FORM];
+                if (data.row.section !== 'body') return;
+                if (sigCols.indexOf(data.column.index) < 0) return;
+                if (data.row.index === nbAttendances) return; // skip TOTAL row
+                var img = imageMap[data.row.index + '-' + data.column.index];
+                if (img) {
+                    var pad = 3;
+                    try {
+                        var fmt = img.indexOf('image/jpeg') >= 0 ? 'JPEG' : 'PNG';
+                        doc.addImage(img, fmt,
+                            data.cell.x + pad, data.cell.y + pad,
+                            data.cell.width  - pad * 2,
+                            data.cell.height - pad * 2);
+                    } catch(e) { /* image corrompue, ignorée */ }
                 }
             }
         });
 
-        let curY = doc.lastAutoTable.finalY + 8;
-        const sigPages = donnees.filter(j => j.signatureMatin || j.sig_matin || j.signatureAM || j.sig_am);
-        if (sigPages.length && curY < 180) {
-            doc.setFontSize(9); doc.setFont('helvetica','bold');
-            doc.text('Signatures originales :', 14, curY); curY += 6;
-            let x = 14;
-            for (const j of sigPages) {
-                const sig = j.signatureMatin || j.sig_matin || j.signatureAM || j.sig_am;
-                if (!sig) continue;
-                try {
-                    doc.addImage(sig, 'PNG', x, curY, 30, 12);
-                    const dateStr = (j.date || '').slice(0,10).split('-').reverse().join('/');
-                    doc.setFontSize(7); doc.setFont('helvetica','normal');
-                    doc.text(dateStr, x, curY + 14);
-                    x += 34;
-                    if (x > 250) { x = 14; curY += 20; }
-                } catch(_) { /* image invalide, ignorée */ }
-            }
+        // Pied de page
+        var finalY = doc.lastAutoTable.finalY || pageH - 20;
+        if (finalY < pageH - 26) {
+            doc.setFont('helvetica', 'normal').setFontSize(8).setTextColor(130, 130, 130);
+            doc.text(
+                'Standard : Matin 8h30-12h (3h30) | AM 13h-16h30 (3h30)    ' +
+                'AFS/AFC* : Matin 8h-12h (4h) | AM 13h-16h30 (3h30)',
+                pageW / 2, finalY + 8, { align: 'center' });
+            doc.text('Document généré le ' + new Date().toLocaleDateString('fr-FR') + ' — Success Formation',
+                pageW / 2, finalY + 13, { align: 'center' });
         }
 
-        const filename = `emargement_${appNom.replace(/\s+/g,'_')}_${MOIS_NOMS[moisVal]}_${annee}.pdf`;
+        var nbPages = doc.internal.getNumberOfPages();
+        for (var p = 1; p <= nbPages; p++) {
+            doc.setPage(p);
+            doc.setFontSize(8).setTextColor(160, 160, 160);
+            doc.text('Page ' + p + ' / ' + nbPages, pageW - marg, pageH - 5, { align: 'right' });
+        }
+
+        var filename = 'Emargement_' + MOIS_NOMS[moisVal] + '_' + annee + '_' +
+                       nomComplet.replace(/\s+/g, '_') + '.pdf';
         doc.save(filename);
         showAlert('✅ PDF généré avec succès : ' + filename, 'success');
+
     } catch(e) {
         showAlert('Erreur lors de la génération PDF : ' + e.message, 'error');
+        console.error('genererPDF:', e);
     } finally {
-        btn.disabled = false;
+        btn.disabled  = false;
         btn.innerHTML = "📄 Télécharger la feuille d'émargement PDF";
     }
 }
 
-/* ── INIT ────────────────────────────────────────────── */
+function formatHeures(h) {
+    var heures = Math.floor(h);
+    var mins   = Math.round((h - heures) * 60);
+    return mins > 0 ? heures + 'h' + String(mins).padStart(2, '0') : heures + 'h00';
+}
+
+/* ── Init ──────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', chargerApprenants);
 </script>
 </body>
