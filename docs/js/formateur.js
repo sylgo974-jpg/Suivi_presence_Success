@@ -245,14 +245,33 @@ downloadQRBtn.addEventListener('click', () => {
 // Agrège automatiquement toutes les sessions de la même formation/date
 // ══════════════════════════════════════════════════════════════════════════════
 async function loadAllAttendance() {
-    if (!activeFormation || !activeDate) return;
+    if (!activeFormation && !activeSessionCode) return;
 
     try {
-        const url = `${API_URL}/attendance/by-formation?date=${encodeURIComponent(activeDate)}&formation=${encodeURIComponent(activeFormation)}`;
-        const response = await fetch(url);
-        if (!response.ok) return;
+        const today = activeDate || new Date().toISOString().split('T')[0];
+        let attendances = [];
 
-        const attendances = await response.json();
+        // Essayer le nouvel endpoint cross-session d'abord
+        if (activeFormation) {
+            try {
+                const urlNew = `${API_URL}/attendance/by-formation?date=${encodeURIComponent(today)}&formation=${encodeURIComponent(activeFormation)}`;
+                const respNew = await fetch(urlNew);
+                if (respNew.ok) {
+                    attendances = await respNew.json();
+                }
+            } catch (_) { /* endpoint pas encore déployé */ }
+        }
+
+        // Fallback : ancien endpoint par sessionCode
+        if (attendances.length === 0 && activeSessionCode) {
+            try {
+                const urlOld = `${API_URL}/attendance/today?date=${encodeURIComponent(today)}&sessionCode=${encodeURIComponent(activeSessionCode)}`;
+                const respOld = await fetch(urlOld);
+                if (respOld.ok) {
+                    attendances = await respOld.json();
+                }
+            } catch (_) { /* pas de connectivité */ }
+        }
 
         // FIX : Construire un Set de noms normalisés pour comparaison fiable
         const nomsSignes = new Set();
