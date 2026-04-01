@@ -24,7 +24,6 @@ async function getGoogleSheetsClient() {
     return google.sheets({ version: 'v4', auth: client });
 }
 
-// ── Normalisation pour comparaisons de noms ───────────────────────────────────
 function norm(str) {
     return (str || '').toLowerCase()
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -32,44 +31,73 @@ function norm(str) {
         .trim();
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// UTILITAIRE : écriture sûre en fin de feuille
+//
+// POURQUOI ? values.append avec INSERT_ROWS peut écraser des lignes existantes
+// quand il y a des lignes vides au milieu de la feuille, ou quand deux appels
+// arrivent quasi-simultanément (race condition).
+//
+// STRATÉGIE : lire la colonne A → trouver la dernière ligne non-vide
+//             → écrire à lastRow+1 avec values.update
+// ══════════════════════════════════════════════════════════════════════════════
+async function appendRowSafe(sheets, sheetName, colEnd, rowData) {
+    var response = await sheets.spreadsheets.values.get({
+        spreadsheetId: SHEET_ID,
+        range: sheetName + '!A:A',
+    });
+    var colA = response.data.values || [];
+
+    var lastRow = 0;
+    for (var i = colA.length - 1; i >= 0; i--) {
+        if (colA[i] && colA[i][0] && colA[i][0].toString().trim() !== '') {
+            lastRow = i + 1;
+            break;
+        }
+    }
+
+    var targetRow = lastRow + 1;
+
+    await sheets.spreadsheets.values.update({
+        spreadsheetId: SHEET_ID,
+        range: sheetName + '!A' + targetRow + ':' + colEnd + targetRow,
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [rowData] },
+    });
+
+    console.log('[appendRowSafe] ' + sheetName + ' ligne ' + targetRow);
+    return targetRow;
+}
+
 // ── Enregistrer une signature d'apprenant ─────────────────────────────────────
-// FIX : Vérification anti-doublon AVANT l'écriture
 async function appendToSheet(data) {
     const sheets = await getGoogleSheetsClient();
 
-    // ── Anti-doublon : vérifier si cet apprenant a déjà signé ce créneau/date ──
+    // Anti-doublon
     try {
-        const existing = await sheets.spreadsheets.values.get({
+        var existing = await sheets.spreadsheets.values.get({
             spreadsheetId: SHEET_ID,
             range: 'Signatures!A:O',
         });
-        const rows = existing.data.values || [];
+        var rows = existing.data.values || [];
 
-        const isDuplicate = rows.slice(1).some(row => {
-            const rowDate       = row[1] || '';
-            const rowCreneau    = row[2] || '';
-            const rowFormation  = row[4] || '';
-            const rowNom        = row[7] || '';
-            const rowPrenom     = row[8] || '';
-
-            return rowDate === data.date
-                && rowCreneau === data.creneau
-                && norm(rowFormation) === norm(data.formation)
-                && norm(rowNom)    === norm(data.apprenantNom)
-                && norm(rowPrenom) === norm(data.apprenantPrenom);
+        var isDuplicate = rows.slice(1).some(function(row) {
+            return (row[1] || '') === data.date
+                && (row[2] || '') === data.creneau
+                && norm(row[4]) === norm(data.formation)
+                && norm(row[7]) === norm(data.apprenantNom)
+                && norm(row[8]) === norm(data.apprenantPrenom);
         });
 
         if (isDuplicate) {
-            console.log(`⚠️ Doublon détecté : ${data.apprenantPrenom} ${data.apprenantNom} a déjà signé le ${data.date} créneau ${data.creneau} (${data.formation}). Écriture ignorée.`);
+            console.log('⚠️ Doublon : ' + data.apprenantPrenom + ' ' + data.apprenantNom);
             return { duplicate: true };
         }
     } catch (checkErr) {
-        // En cas d'erreur de lecture, on continue quand même l'écriture
-        // pour ne pas bloquer la signature
-        console.warn('⚠️ Impossible de vérifier les doublons:', checkErr.message);
+        console.warn('⚠️ Vérification doublons impossible:', checkErr.message);
     }
 
-    const row = [
+    var row = [
         new Date().toISOString(),
         data.date,
         data.creneau,
@@ -84,312 +112,184 @@ async function appendToSheet(data) {
         data.longitude || 'N/A',
         data.userAgent || 'N/A',
         data.timestamp,
-        data.sessionCode || ''   // Colonne O
+        data.sessionCode || ''
     ];
 
-    await sheets.spreadsheets.values.append({
-        spreadsheetId: SHEET_ID,
-        range: 'Signatures!A:O',
-        valueInputOption: 'USER_ENTERED',
-        insertDataOption: 'INSERT_ROWS',   // FIX : forcer l'insertion de nouvelles lignes
-        resource: { values: [row] },
-    });
-
-    console.log(`✅ Signature enregistrée: ${data.apprenantPrenom} ${data.apprenantNom} [session: ${data.sessionCode}]`);
+    await appendRowSafe(sheets, 'Signatures', 'O', row);
+    console.log('✅ Signature : ' + data.apprenantPrenom + ' ' + data.apprenantNom + ' [' + data.sessionCode + ']');
     return { duplicate: false };
 }
 
-// ── Récupérer les présences filtrées par sessionCode (ancien mode) ────────────
+// ── Récupérer les présences filtrées par sessionCode ──────────────────────────
 async function getTodayAttendances(date, sessionCode) {
     const sheets = await getGoogleSheetsClient();
-
-    const response = await sheets.spreadsheets.values.get({
-        spreadsheetId: SHEET_ID,
-        range: 'Signatures!A:O',
+    var response = await sheets.spreadsheets.values.get({
+        spreadsheetId: SHEET_ID, range: 'Signatures!A:O',
     });
-    const rows = response.data.values || [];
+    var rows = response.data.values || [];
 
-    return rows
-        .slice(1)
-        .filter(row => {
-            const rowDate = row[1];
-            const rowSessionCode = row[14] || '';
-            if (!rowDate) return false;
-            if (rowDate !== date) return false;
-            if (sessionCode) return rowSessionCode === sessionCode;
-            return true;
-        })
-        .map(row => ({
-            timestamp:      row[0],
-            date:           row[1],
-            creneau:        row[2],
-            creneauLabel:   row[3],
-            formation:      row[4],
-            formateurNom:   row[5],
-            formateurPrenom:row[6],
-            apprenantNom:   row[7],
-            apprenantPrenom:row[8],
-            sessionCode:    row[14] || ''
-        }));
+    return rows.slice(1).filter(function(row) {
+        if (!row[1] || row[1] !== date) return false;
+        if (sessionCode) return (row[14] || '') === sessionCode;
+        return true;
+    }).map(function(row) {
+        return {
+            timestamp: row[0], date: row[1], creneau: row[2], creneauLabel: row[3],
+            formation: row[4], formateurNom: row[5], formateurPrenom: row[6],
+            apprenantNom: row[7], apprenantPrenom: row[8], sessionCode: row[14] || ''
+        };
+    });
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// FIX PRINCIPAL : Nouvelle fonction — présences par formation + date + créneau
-// Agrège les signatures de TOUTES les sessions d'une même formation/date
-// Déduplique par nom normalisé pour éviter les doublons visuels
-// ══════════════════════════════════════════════════════════════════════════════
+// ── Présences par formation + date (cross-session) ────────────────────────────
 async function getAttendanceByFormation(date, formation, creneau) {
     const sheets = await getGoogleSheetsClient();
-
-    const response = await sheets.spreadsheets.values.get({
-        spreadsheetId: SHEET_ID,
-        range: 'Signatures!A:O',
+    var response = await sheets.spreadsheets.values.get({
+        spreadsheetId: SHEET_ID, range: 'Signatures!A:O',
     });
-    const rows = response.data.values || [];
+    var rows = response.data.values || [];
+    var seen = new Set();
+    var results = [];
 
-    const seen = new Set();    // Pour dédupliquer par nom normalisé + créneau
-    const results = [];
-
-    rows.slice(1).forEach(row => {
-        const rowDate      = row[1] || '';
-        const rowCreneau   = row[2] || '';
-        const rowFormation = row[4] || '';
-        const rowNom       = row[7] || '';
-        const rowPrenom    = row[8] || '';
-
-        if (rowDate !== date) return;
-        if (norm(rowFormation) !== norm(formation)) return;
-        if (creneau && rowCreneau !== creneau) return;
-
-        // Clé de déduplication : nom normalisé + créneau
-        const dedupeKey = norm(rowNom) + '|' + norm(rowPrenom) + '|' + rowCreneau;
-        if (seen.has(dedupeKey)) return;
-        seen.add(dedupeKey);
-
+    rows.slice(1).forEach(function(row) {
+        if ((row[1] || '') !== date) return;
+        if (norm(row[4]) !== norm(formation)) return;
+        if (creneau && (row[2] || '') !== creneau) return;
+        var key = norm(row[7]) + '|' + norm(row[8]) + '|' + (row[2] || '');
+        if (seen.has(key)) return;
+        seen.add(key);
         results.push({
-            timestamp:       row[0],
-            date:            row[1],
-            creneau:         row[2],
-            creneauLabel:    row[3],
-            formation:       row[4],
-            formateurNom:    row[5],
-            formateurPrenom: row[6],
-            apprenantNom:    row[7],
-            apprenantPrenom: row[8],
-            sessionCode:     row[14] || ''
+            timestamp: row[0], date: row[1], creneau: row[2], creneauLabel: row[3],
+            formation: row[4], formateurNom: row[5], formateurPrenom: row[6],
+            apprenantNom: row[7], apprenantPrenom: row[8], sessionCode: row[14] || ''
         });
     });
-
     return results;
 }
 
 // ── Sauvegarder une session ──────────────────────────────────────────────────
 async function saveSessions(sessionData) {
     const sheets = await getGoogleSheetsClient();
-
-    const row = [
-        sessionData.sessionCode,
-        sessionData.formateurNom,
-        sessionData.formateurPrenom,
-        sessionData.formation,
-        sessionData.date,
-        sessionData.creneau,
-        sessionData.creneauLabel,
-        sessionData.createdAt,
-        sessionData.jour || '',
-        sessionData.signatureMatin     || '',
-        sessionData.signatureApresMidi || ''
+    var row = [
+        sessionData.sessionCode, sessionData.formateurNom, sessionData.formateurPrenom,
+        sessionData.formation, sessionData.date, sessionData.creneau,
+        sessionData.creneauLabel, sessionData.createdAt, sessionData.jour || '',
+        sessionData.signatureMatin || '', sessionData.signatureApresMidi || ''
     ];
-
-    await sheets.spreadsheets.values.append({
-        spreadsheetId: SHEET_ID,
-        range: 'Sessions!A:K',
-        valueInputOption: 'USER_ENTERED',
-        insertDataOption: 'INSERT_ROWS',   // FIX : forcer INSERT au lieu de OVERWRITE
-        resource: { values: [row] },
-    });
-
-    console.log(`✅ Session sauvegardée: ${sessionData.sessionCode}`);
+    await appendRowSafe(sheets, 'Sessions', 'K', row);
+    console.log('✅ Session sauvegardée: ' + sessionData.sessionCode);
 }
 
 // ── Récupérer une session par son code ───────────────────────────────────────
 async function getSessionByCode(code) {
     const sheets = await getGoogleSheetsClient();
-
     try {
-        const response = await sheets.spreadsheets.values.get({
-            spreadsheetId: SHEET_ID,
-            range: 'Sessions!A:K',
+        var response = await sheets.spreadsheets.values.get({
+            spreadsheetId: SHEET_ID, range: 'Sessions!A:K',
         });
-        const rows = response.data.values || [];
-
-        const sessionRow = rows.find(row => row[0] === code);
+        var rows = response.data.values || [];
+        var sessionRow = rows.find(function(row) { return row[0] === code; });
         if (!sessionRow) return null;
-
         return {
-            sessionCode:         sessionRow[0],
-            formateurNom:        sessionRow[1],
-            formateurPrenom:     sessionRow[2],
-            formation:           sessionRow[3],
-            date:                sessionRow[4],
-            creneau:             sessionRow[5],
-            creneauLabel:        sessionRow[6],
-            createdAt:           sessionRow[7],
-            jour:                sessionRow[8] || null,
-            signatureMatin:      sessionRow[9]  || null,
-            signatureApresMidi:  sessionRow[10] || null
+            sessionCode: sessionRow[0], formateurNom: sessionRow[1],
+            formateurPrenom: sessionRow[2], formation: sessionRow[3],
+            date: sessionRow[4], creneau: sessionRow[5], creneauLabel: sessionRow[6],
+            createdAt: sessionRow[7], jour: sessionRow[8] || null,
+            signatureMatin: sessionRow[9] || null, signatureApresMidi: sessionRow[10] || null
         };
-
     } catch (error) {
         console.error('❌ Erreur recherche session:', error.message);
         throw error;
     }
 }
 
-// ── Mettre à jour la signature formateur d'une session existante ─────────────
+// ── Mettre à jour la signature formateur ─────────────────────────────────────
 async function updateSessionSignature(code, creneau, signature) {
     const sheets = await getGoogleSheetsClient();
-
-    const response = await sheets.spreadsheets.values.get({
-        spreadsheetId: SHEET_ID,
-        range: 'Sessions!A:A',
+    var response = await sheets.spreadsheets.values.get({
+        spreadsheetId: SHEET_ID, range: 'Sessions!A:A',
     });
-    const rows = response.data.values || [];
-
-    const rowIndex = rows.findIndex((row, i) => i > 0 && row[0] === code);
-    if (rowIndex === -1) {
-        throw new Error(`Session ${code} introuvable`);
-    }
-
-    const sheetsRow = rowIndex + 1;
-    const col = creneau === 'matin' ? 'J' : 'K';
-
+    var rows = response.data.values || [];
+    var rowIndex = rows.findIndex(function(row, i) { return i > 0 && row[0] === code; });
+    if (rowIndex === -1) throw new Error('Session ' + code + ' introuvable');
+    var sheetsRow = rowIndex + 1;
+    var col = creneau === 'matin' ? 'J' : 'K';
     await sheets.spreadsheets.values.update({
         spreadsheetId: SHEET_ID,
-        range: `Sessions!${col}${sheetsRow}`,
+        range: 'Sessions!' + col + sheetsRow,
         valueInputOption: 'USER_ENTERED',
         resource: { values: [[signature]] },
     });
-
-    console.log(`✅ Signature ${creneau} mise à jour — session ${code} (ligne ${sheetsRow})`);
+    console.log('✅ Sig ' + creneau + ' — session ' + code + ' (ligne ' + sheetsRow + ')');
 }
 
-// ── Récapitulatif mensuel d'un apprenant ─────────────────────────────────────
+// ── Récapitulatif mensuel ────────────────────────────────────────────────────
 async function getMonthlyAttendance(nomComplet, month, year) {
     const sheets = await getGoogleSheetsClient();
-
-    const ncNorm = norm(nomComplet);
+    var ncNorm = norm(nomComplet);
 
     function isInMonth(dateStr) {
         if (!dateStr) return false;
-        const d = new Date(dateStr);
+        var d = new Date(dateStr);
         if (isNaN(d.getTime())) return false;
-        return (d.getMonth() + 1) === parseInt(month) &&
-               d.getFullYear()    === parseInt(year);
+        return (d.getMonth() + 1) === parseInt(month) && d.getFullYear() === parseInt(year);
     }
 
-    // ── 1. Lire toutes les signatures ─────────────────────────────────────────
-    const sigResp = await sheets.spreadsheets.values.get({
-        spreadsheetId: SHEET_ID,
-        range: 'Signatures!A:O',
+    var sigResp = await sheets.spreadsheets.values.get({
+        spreadsheetId: SHEET_ID, range: 'Signatures!A:O',
     });
-    const sigRows = (sigResp.data.values || []).slice(1);
+    var sigRows = (sigResp.data.values || []).slice(1);
 
-    const mySignatures = sigRows.filter(row => {
-        const sigNom    = row[7] || '';
-        const sigPrenom = row[8] || '';
-        const sigFull1  = norm(`${sigNom} ${sigPrenom}`);
-        const sigFull2  = norm(`${sigPrenom} ${sigNom}`);
-        const dateRow   = row[1] || '';
-
-        const nameMatch =
-            ncNorm === sigFull1 ||
-            ncNorm === sigFull2 ||
-            sigFull1.includes(ncNorm) ||
-            sigFull2.includes(ncNorm) ||
-            ncNorm.includes(norm(sigNom));
-
-        return nameMatch && isInMonth(dateRow);
+    var mySignatures = sigRows.filter(function(row) {
+        var f1 = norm((row[7]||'') + ' ' + (row[8]||''));
+        var f2 = norm((row[8]||'') + ' ' + (row[7]||''));
+        var nameMatch = ncNorm === f1 || ncNorm === f2
+            || f1.indexOf(ncNorm) >= 0 || f2.indexOf(ncNorm) >= 0
+            || ncNorm.indexOf(norm(row[7])) >= 0;
+        return nameMatch && isInMonth(row[1] || '');
     });
 
-    // ── 2. Lire toutes les sessions pour récupérer les signatures formateur ───
-    const sessResp = await sheets.spreadsheets.values.get({
-        spreadsheetId: SHEET_ID,
-        range: 'Sessions!A:K',
+    var sessResp = await sheets.spreadsheets.values.get({
+        spreadsheetId: SHEET_ID, range: 'Sessions!A:K',
     });
-    const sessRows = (sessResp.data.values || []).slice(1);
-
-    const sessionsMap = {};
-    sessRows.forEach(row => {
-        if (row[0]) {
-            sessionsMap[row[0]] = {
-                sessionCode:        row[0],
-                formateurNom:       row[1],
-                formateurPrenom:    row[2],
-                formation:          row[3],
-                date:               row[4],
-                creneau:            row[5],
-                jour:               row[8] || '',
-                signatureMatin:     row[9]  || null,
-                signatureApresMidi: row[10] || null
-            };
-        }
+    var sessRows = (sessResp.data.values || []).slice(1);
+    var sessionsMap = {};
+    sessRows.forEach(function(row) {
+        if (row[0]) sessionsMap[row[0]] = {
+            sessionCode: row[0], formateurNom: row[1], formateurPrenom: row[2],
+            formation: row[3], date: row[4], creneau: row[5], jour: row[8] || '',
+            signatureMatin: row[9] || null, signatureApresMidi: row[10] || null
+        };
     });
 
-    // ── 3. Construire la map journalière ─────────────────────────────────────
-    const dailyMap = {};
-
-    mySignatures.forEach(sig => {
-        const date        = sig[1] || '';
-        const creneau     = sig[2] || '';
-        const timestamp   = sig[0] || '';
-        const sessionCode = sig[14] || '';
-        const sess        = sessionsMap[sessionCode] || {};
-
-        const dateKey = date.includes('T') ? date.split('T')[0] : date;
-
-        if (!dailyMap[dateKey]) {
-            dailyMap[dateKey] = { date: dateKey, matin: null, apresMidi: null };
-        }
-
-        const sigData = {
-            timestamp,
-            formation:          sig[4] || '',
-            formateurNom:       sig[5] || sess.formateurNom || '',
-            formateurPrenom:    sig[6] || sess.formateurPrenom || '',
-            signatureApprenant: sig[9] || null,
-            sessionCode,
-            signatureFormateur: creneau === 'matin'
-                ? (sess.signatureMatin     || null)
-                : (sess.signatureApresMidi || null),
-            signatureFormateurMatin:     sess.signatureMatin     || null,
+    var dailyMap = {};
+    mySignatures.forEach(function(sig) {
+        var date = sig[1] || '', creneau = sig[2] || '';
+        var sessionCode = sig[14] || '';
+        var sess = sessionsMap[sessionCode] || {};
+        var dateKey = date.indexOf('T') >= 0 ? date.split('T')[0] : date;
+        if (!dailyMap[dateKey]) dailyMap[dateKey] = { date: dateKey, matin: null, apresMidi: null };
+        var sigData = {
+            timestamp: sig[0] || '', formation: sig[4] || '',
+            formateurNom: sig[5] || sess.formateurNom || '',
+            formateurPrenom: sig[6] || sess.formateurPrenom || '',
+            signatureApprenant: sig[9] || null, sessionCode: sessionCode,
+            signatureFormateur: creneau === 'matin' ? (sess.signatureMatin || null) : (sess.signatureApresMidi || null),
+            signatureFormateurMatin: sess.signatureMatin || null,
             signatureFormateurApresMidi: sess.signatureApresMidi || null
         };
-
-        if (creneau === 'matin') {
-            dailyMap[dateKey].matin = sigData;
-        } else {
-            dailyMap[dateKey].apresMidi = sigData;
-        }
+        if (creneau === 'matin') dailyMap[dateKey].matin = sigData;
+        else dailyMap[dateKey].apresMidi = sigData;
     });
 
-    const attendances = Object.values(dailyMap)
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
-
     return {
-        apprenant: { nomComplet },
-        mois:  parseInt(month),
-        annee: parseInt(year),
-        attendances
+        apprenant: { nomComplet: nomComplet },
+        mois: parseInt(month), annee: parseInt(year),
+        attendances: Object.values(dailyMap).sort(function(a,b) { return new Date(a.date) - new Date(b.date); })
     };
 }
 
 module.exports = {
-    appendToSheet,
-    getTodayAttendances,
-    getAttendanceByFormation,    // NOUVEAU
-    saveSessions,
-    getSessionByCode,
-    updateSessionSignature,
-    getMonthlyAttendance
+    appendToSheet, getTodayAttendances, getAttendanceByFormation,
+    saveSessions, getSessionByCode, updateSessionSignature, getMonthlyAttendance
 };
