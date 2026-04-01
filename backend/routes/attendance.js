@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { appendToSheet, getTodayAttendances, getAttendanceByFormation } = require('../config/sheets');
 
-// ── Utilitaires retry ───────────────────────────────────────────────────────────────
+// ── Utilitaires retry ──────────────────────────────────────────────────────────
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
@@ -27,7 +27,7 @@ async function appendWithRetry(data, maxRetries = 3) {
   }
 }
 
-// ── POST /api/attendance/sign ──────────────────────────────────────────────────────────
+// ── POST /api/attendance/sign ─────────────────────────────────────────────────
 router.post('/sign', async (req, res) => {
   try {
     const data = req.body;
@@ -48,6 +48,7 @@ router.post('/sign', async (req, res) => {
     }
 
     res.json({ success: true, duplicate: false, message: 'Signature enregistree' });
+
   } catch (error) {
     console.error('Erreur /attendance/sign:', error);
     res.status(500).json({
@@ -57,7 +58,7 @@ router.post('/sign', async (req, res) => {
   }
 });
 
-// ── GET /api/attendance/today?date=YYYY-MM-DD&sessionCode=XXXXXX ───────────────────────
+// ── GET /api/attendance/today?date=YYYY-MM-DD&sessionCode=XXXXXX ──────────────
 // Mode legacy : filtre par sessionCode
 router.get('/today', async (req, res) => {
   try {
@@ -70,17 +71,18 @@ router.get('/today', async (req, res) => {
 
     const attendances = await getTodayAttendances(date, sessionCode);
     res.json(attendances);
+
   } catch (error) {
     console.error('Erreur /attendance/today:', error);
     res.status(500).json({ message: 'Erreur serveur', code: 'TODAY_FETCH_FAILED' });
   }
 });
 
-// ═════════════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════
 // FIX PRINCIPAL : Nouvel endpoint cross-session
 // GET /api/attendance/by-formation?date=YYYY-MM-DD&formation=TSMEL&creneau=matin
 // Agrège les signatures de TOUTES les sessions d'une même formation/date
-// ═════════════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════
 router.get('/by-formation', async (req, res) => {
   try {
     const { date, formation, creneau } = req.query;
@@ -94,6 +96,7 @@ router.get('/by-formation', async (req, res) => {
 
     const attendances = await getAttendanceByFormation(date, formation, creneau || null);
     res.json(attendances);
+
   } catch (error) {
     console.error('Erreur /attendance/by-formation:', error);
     res.status(500).json({ message: 'Erreur serveur', code: 'FORMATION_FETCH_FAILED' });
